@@ -6,8 +6,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import ServerList from '@/components/ServerList';
 import ChannelList from '@/components/ChannelList';
 import ChatArea from '@/components/ChatArea';
 import ConnectionStatus from '@/components/ConnectionStatus';
@@ -57,7 +55,6 @@ const Index = () => {
     uploadImage,
     createChannel,
     selectChannel,
-    selectServer
   } = usePeerConnection({
     userId,
     username: username || 'Anonymous'
@@ -205,15 +202,6 @@ const Index = () => {
       {/* Main chat interface */}
       {!isSetupDialogOpen && (
         <div className="flex h-screen overflow-hidden bg-[#313338]">
-          {/* Server list */}
-          <ServerList 
-            servers={[]}
-            currentServerId={currentChannelId || undefined}
-            currentUserId={userId}
-            onSelectServer={selectChannel}
-            onCreateServer={() => handleOpenCreateChannel('text')}
-          />
-          
           {/* Channel list */}
           <ChannelList 
             channels={channels}
