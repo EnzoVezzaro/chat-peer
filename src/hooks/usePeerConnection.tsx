@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { toast } from 'sonner';
-import { ConnectionStatus, Message, User } from '@/types/types';
+import { ConnectionStatus, Message, User, Channel, Server } from '@/types/types';
 
 type UsePeerConnectionProps = {
   userId: string;
@@ -10,7 +10,7 @@ type UsePeerConnectionProps = {
 };
 
 type PeerMessage = {
-  type: 'message' | 'user-info' | 'typing' | 'read';
+  type: 'message' | 'user-info' | 'typing' | 'read' | 'channel' | 'server' | 'media-offer' | 'media-answer' | 'media-end';
   payload: any;
 };
 
@@ -18,10 +18,60 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
+  const [currentChannelId, setCurrentChannelId] = useState<string | null>(null);
+  const [currentServerId, setCurrentServerId] = useState<string | null>(null);
   const [connectedPeers, setConnectedPeers] = useState<string[]>([]);
+  const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState<boolean>(false);
+  const [isScreenSharing, setIsScreenSharing] = useState<boolean>(false);
+  const [userStreams, setUserStreams] = useState<{[userId: string]: MediaStream}>({});
+  const [isTyping, setIsTyping] = useState<boolean>(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const peerRef = useRef<Peer | null>(null);
   const connectionsRef = useRef<Record<string, DataConnection>>({});
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  // Default channels
+  useEffect(() => {
+    if (!channels.length) {
+      const defaultChannels: Channel[] = [
+        {
+          id: 'general',
+          name: 'general',
+          description: 'General discussion',
+          isPrivate: false,
+          type: 'text',
+          members: [],
+          messages: []
+        },
+        {
+          id: 'voice',
+          name: 'Voice Chat',
+          description: 'Voice channel',
+          isPrivate: false,
+          type: 'voice',
+          members: [],
+          messages: []
+        },
+        {
+          id: 'announcements',
+          name: 'Announcements',
+          description: 'Important announcements',
+          isPrivate: false,
+          type: 'announcement',
+          members: [],
+          messages: []
+        }
+      ];
+      
+      setChannels(defaultChannels);
+      setCurrentChannelId('general');
+    }
+  }, [channels.length]);
 
   // Initialize peer connection
   useEffect(() => {
@@ -52,6 +102,23 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           setupConnection(conn);
         });
 
+        peer.on('call', (call) => {
+          // Answer incoming calls with local stream if available
+          if (localStreamRef.current) {
+            call.answer(localStreamRef.current);
+          } else {
+            call.answer(); // Answer without sending stream
+          }
+          
+          call.on('stream', (remoteStream) => {
+            console.log('Received remote stream', remoteStream);
+            setUserStreams(prev => ({
+              ...prev,
+              [call.peer]: remoteStream
+            }));
+          });
+        });
+
         peer.on('error', (err) => {
           console.error('Peer connection error:', err);
           toast.error(`Connection error: ${err.message}`);
@@ -78,6 +145,14 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       if (peerRef.current) {
         peerRef.current.destroy();
       }
+      
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
     };
   }, [userId, username]);
 
@@ -101,6 +176,22 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           status: 'online'
         }
       });
+      
+      // Send channel list
+      if (channels.length > 0) {
+        sendToPeer(peerId, {
+          type: 'channel',
+          payload: channels
+        });
+      }
+      
+      // Send server list
+      if (servers.length > 0) {
+        sendToPeer(peerId, {
+          type: 'server',
+          payload: servers
+        });
+      }
     });
 
     conn.on('data', (data: PeerMessage) => {
@@ -110,6 +201,19 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
         case 'message':
           const messageData = data.payload as Message;
           setMessages((prev) => [...prev, messageData]);
+          
+          // Update channel messages
+          if (currentChannelId) {
+            setChannels(prev => prev.map(channel => {
+              if (channel.id === currentChannelId) {
+                return {
+                  ...channel,
+                  messages: [...channel.messages, messageData]
+                };
+              }
+              return channel;
+            }));
+          }
           break;
         
         case 'user-info':
@@ -121,11 +225,45 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           break;
           
         case 'typing':
-          // Handle typing indicator
+          const typingData = data.payload as { userId: string; isTyping: boolean };
+          setUsers(prev => prev.map(user => {
+            if (user.id === typingData.userId) {
+              return { ...user, isTyping: typingData.isTyping };
+            }
+            return user;
+          }));
           break;
           
-        case 'read':
-          // Handle read receipts
+        case 'channel':
+          const channelData = data.payload as Channel[];
+          setChannels(prev => {
+            // Merge with existing channels
+            const existingIds = new Set(prev.map(c => c.id));
+            const newChannels = channelData.filter(c => !existingIds.has(c.id));
+            return [...prev, ...newChannels];
+          });
+          break;
+          
+        case 'server':
+          const serverData = data.payload as Server[];
+          setServers(prev => {
+            // Merge with existing servers
+            const existingIds = new Set(prev.map(s => s.id));
+            const newServers = serverData.filter(s => !existingIds.has(s.id));
+            return [...prev, ...newServers];
+          });
+          break;
+          
+        case 'media-offer':
+          // Handle media offer (for future implementation)
+          break;
+          
+        case 'media-answer':
+          // Handle media answer (for future implementation)
+          break;
+          
+        case 'media-end':
+          // Handle media end (for future implementation)
           break;
       }
     });
@@ -151,7 +289,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       console.error('Connection error:', err);
       toast.error(`Connection error with peer: ${err}`);
     });
-  }, [userId, username]);
+  }, [userId, username, channels, currentChannelId, servers]);
 
   // Connect to a peer
   const connectToPeer = useCallback((peerId: string) => {
@@ -163,6 +301,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     try {
       const conn = peerRef.current.connect(peerId);
       setupConnection(conn);
+      toast.success(`Connecting to ${peerId}...`);
     } catch (error) {
       console.error('Failed to connect to peer:', error);
       toast.error(`Failed to connect to ${peerId}`);
@@ -189,19 +328,33 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   }, []);
 
   // Send a message
-  const sendMessage = useCallback((content: string) => {
-    if (!content.trim() || status !== 'connected') return;
+  const sendMessage = useCallback((content: string, type: 'text' | 'image' | 'audio' | 'video' = 'text') => {
+    if ((!content.trim() && type === 'text') || status !== 'connected') return;
     
     const message: Message = {
       id: `${userId}-${Date.now()}`,
       content,
       senderId: userId,
       timestamp: Date.now(),
-      read: false
+      read: false,
+      type
     };
     
     // Add to local messages
     setMessages((prev) => [...prev, message]);
+    
+    // Add to current channel messages
+    if (currentChannelId) {
+      setChannels(prev => prev.map(channel => {
+        if (channel.id === currentChannelId) {
+          return {
+            ...channel,
+            messages: [...channel.messages, message]
+          };
+        }
+        return channel;
+      }));
+    }
     
     // Send to all peers
     broadcast({
@@ -210,7 +363,342 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     });
     
     return message;
-  }, [userId, status, broadcast]);
+  }, [userId, status, broadcast, currentChannelId]);
+
+  // Update typing status
+  const updateTypingStatus = useCallback((isUserTyping: boolean) => {
+    if (isTyping === isUserTyping) return;
+    
+    setIsTyping(isUserTyping);
+    
+    // Send typing status to peers
+    broadcast({
+      type: 'typing',
+      payload: { userId, isTyping: isUserTyping }
+    });
+    
+    // Clear previous timeout
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+    
+    // Set timeout to clear typing status
+    if (isUserTyping) {
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+        broadcast({
+          type: 'typing',
+          payload: { userId, isTyping: false }
+        });
+      }, 3000);
+      
+      setTypingTimeout(timeout);
+    }
+  }, [isTyping, typingTimeout, broadcast, userId]);
+
+  // Toggle audio
+  const toggleAudio = useCallback(async () => {
+    try {
+      if (!localStreamRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideoEnabled });
+        localStreamRef.current = stream;
+        
+        // Call all connected peers
+        callAllPeers();
+        
+        setIsAudioEnabled(true);
+        toast.success('Microphone enabled');
+      } else {
+        const audioTracks = localStreamRef.current.getAudioTracks();
+        
+        if (audioTracks.length > 0) {
+          const isCurrentlyEnabled = audioTracks[0].enabled;
+          audioTracks.forEach(track => {
+            track.enabled = !isCurrentlyEnabled;
+          });
+          
+          setIsAudioEnabled(!isCurrentlyEnabled);
+          toast.success(isCurrentlyEnabled ? 'Microphone disabled' : 'Microphone enabled');
+        } else {
+          // No audio tracks, need to get new stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideoEnabled });
+          
+          // Replace current stream
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+          }
+          
+          localStreamRef.current = stream;
+          callAllPeers();
+          
+          setIsAudioEnabled(true);
+          toast.success('Microphone enabled');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling audio:', error);
+      toast.error('Failed to toggle microphone');
+    }
+  }, [isVideoEnabled]);
+
+  // Toggle video
+  const toggleVideo = useCallback(async () => {
+    try {
+      if (!localStreamRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
+        localStreamRef.current = stream;
+        
+        // Call all connected peers
+        callAllPeers();
+        
+        setIsVideoEnabled(true);
+        toast.success('Camera enabled');
+      } else {
+        const videoTracks = localStreamRef.current.getVideoTracks();
+        
+        if (videoTracks.length > 0) {
+          const isCurrentlyEnabled = videoTracks[0].enabled;
+          videoTracks.forEach(track => {
+            track.enabled = !isCurrentlyEnabled;
+          });
+          
+          setIsVideoEnabled(!isCurrentlyEnabled);
+          toast.success(isCurrentlyEnabled ? 'Camera disabled' : 'Camera enabled');
+        } else {
+          // No video tracks, need to get new stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
+          
+          // Replace current stream
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+          }
+          
+          localStreamRef.current = stream;
+          callAllPeers();
+          
+          setIsVideoEnabled(true);
+          toast.success('Camera enabled');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling video:', error);
+      toast.error('Failed to toggle camera');
+    }
+  }, [isAudioEnabled]);
+
+  // Share screen
+  const shareScreen = useCallback(async () => {
+    try {
+      if (isScreenSharing && screenStreamRef.current) {
+        // Stop screen sharing
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
+        setIsScreenSharing(false);
+        toast.success('Screen sharing stopped');
+        
+        // Restore previous stream if available
+        if (localStreamRef.current) {
+          callAllPeers();
+        }
+        
+        return;
+      }
+      
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      
+      // Add event listener for when user stops sharing
+      stream.getVideoTracks()[0].onended = () => {
+        setIsScreenSharing(false);
+        screenStreamRef.current = null;
+        toast.success('Screen sharing stopped');
+        
+        // Restore previous stream if available
+        if (localStreamRef.current) {
+          callAllPeers();
+        }
+      };
+      
+      screenStreamRef.current = stream;
+      setIsScreenSharing(true);
+      toast.success('Screen sharing started');
+      
+      // Call all peers with screen share
+      callAllPeersWithScreen();
+      
+    } catch (error) {
+      console.error('Error sharing screen:', error);
+      toast.error('Failed to share screen');
+    }
+  }, [isScreenSharing]);
+
+  // Call all peers with current stream
+  const callAllPeers = useCallback(() => {
+    if (!peerRef.current || !localStreamRef.current) return;
+    
+    connectedPeers.forEach(peerId => {
+      try {
+        const call = peerRef.current!.call(peerId, localStreamRef.current!);
+        
+        call.on('stream', (remoteStream) => {
+          console.log('Received remote stream from', peerId);
+          setUserStreams(prev => ({
+            ...prev,
+            [peerId]: remoteStream
+          }));
+        });
+      } catch (error) {
+        console.error('Error calling peer:', error);
+      }
+    });
+  }, [connectedPeers]);
+
+  // Call all peers with screen share
+  const callAllPeersWithScreen = useCallback(() => {
+    if (!peerRef.current || !screenStreamRef.current) return;
+    
+    connectedPeers.forEach(peerId => {
+      try {
+        const call = peerRef.current!.call(peerId, screenStreamRef.current!);
+        
+        call.on('stream', (remoteStream) => {
+          console.log('Received remote stream from', peerId);
+          setUserStreams(prev => ({
+            ...prev,
+            [peerId]: remoteStream
+          }));
+        });
+      } catch (error) {
+        console.error('Error calling peer with screen:', error);
+      }
+    });
+  }, [connectedPeers]);
+
+  // Upload and share image
+  const uploadImage = useCallback(async (file: File) => {
+    try {
+      if (!file) return;
+      
+      // Convert file to data URL
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        if (event.target && event.target.result) {
+          const imageDataUrl = event.target.result as string;
+          
+          // Send image message
+          sendMessage(imageDataUrl, 'image');
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    }
+  }, [sendMessage]);
+
+  // Create a new channel
+  const createChannel = useCallback((name: string, type: 'text' | 'voice' | 'announcement' = 'text') => {
+    if (!name.trim()) return;
+    
+    const channel: Channel = {
+      id: `channel-${Date.now()}`,
+      name: name.trim(),
+      description: `${name} channel`,
+      isPrivate: false,
+      type,
+      members: [],
+      messages: []
+    };
+    
+    setChannels(prev => [...prev, channel]);
+    setCurrentChannelId(channel.id);
+    
+    // Broadcast new channel
+    broadcast({
+      type: 'channel',
+      payload: [channel]
+    });
+    
+    toast.success(`Created ${type} channel: ${name}`);
+    
+    return channel;
+  }, [broadcast]);
+
+  // Create a new server
+  const createServer = useCallback((name: string) => {
+    if (!name.trim()) return;
+    
+    const serverId = `server-${Date.now()}`;
+    
+    // Create default channels for server
+    const generalChannel: Channel = {
+      id: `${serverId}-general`,
+      name: 'general',
+      description: 'General discussion',
+      isPrivate: false,
+      type: 'text',
+      members: [],
+      messages: []
+    };
+    
+    const voiceChannel: Channel = {
+      id: `${serverId}-voice`,
+      name: 'Voice Chat',
+      description: 'Voice channel',
+      isPrivate: false,
+      type: 'voice',
+      members: [],
+      messages: []
+    };
+    
+    // Add channels
+    setChannels(prev => [...prev, generalChannel, voiceChannel]);
+    
+    const server: Server = {
+      id: serverId,
+      name: name.trim(),
+      ownerId: userId,
+      channels: [generalChannel.id, voiceChannel.id],
+      members: [userId]
+    };
+    
+    setServers(prev => [...prev, server]);
+    setCurrentServerId(server.id);
+    setCurrentChannelId(generalChannel.id);
+    
+    // Broadcast new server and channels
+    broadcast({
+      type: 'server',
+      payload: [server]
+    });
+    
+    broadcast({
+      type: 'channel',
+      payload: [generalChannel, voiceChannel]
+    });
+    
+    toast.success(`Created server: ${name}`);
+    
+    return server;
+  }, [broadcast, userId]);
+
+  // Select channel
+  const selectChannel = useCallback((channelId: string) => {
+    setCurrentChannelId(channelId);
+  }, []);
+
+  // Select server
+  const selectServer = useCallback((serverId: string) => {
+    setCurrentServerId(serverId);
+    
+    // Get first channel of server
+    const server = servers.find(s => s.id === serverId);
+    if (server && server.channels.length > 0) {
+      const firstChannelId = server.channels[0];
+      setCurrentChannelId(firstChannelId);
+    }
+  }, [servers]);
 
   // Disconnect from all peers and server
   const disconnect = useCallback(() => {
@@ -223,6 +711,21 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       setStatus('disconnected');
       connectionsRef.current = {};
       setConnectedPeers([]);
+      
+      // Stop media streams
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
+      
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
+      }
+      
+      setIsAudioEnabled(false);
+      setIsVideoEnabled(false);
+      setIsScreenSharing(false);
     }
   }, []);
 
@@ -230,9 +733,26 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     status,
     users,
     messages,
+    channels,
+    servers,
+    currentChannelId,
+    currentServerId,
     connectedPeers,
+    userStreams,
+    isAudioEnabled,
+    isVideoEnabled,
+    isScreenSharing,
     connectToPeer,
     sendMessage,
+    updateTypingStatus,
+    toggleAudio,
+    toggleVideo,
+    shareScreen,
+    uploadImage,
+    createChannel,
+    createServer,
+    selectChannel,
+    selectServer,
     disconnect
   };
 };

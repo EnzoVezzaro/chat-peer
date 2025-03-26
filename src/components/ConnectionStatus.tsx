@@ -14,9 +14,9 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status }) => {
       className={cn(
         'connection-indicator animate-fade-in',
         {
-          'connection-connected': status === 'connected',
-          'connection-connecting': status === 'connecting',
-          'connection-disconnected': status === 'disconnected',
+          'bg-green-500/20 text-green-500': status === 'connected',
+          'bg-yellow-500/20 text-yellow-500': status === 'connecting',
+          'bg-red-500/20 text-red-500': status === 'disconnected',
         }
       )}
     >
