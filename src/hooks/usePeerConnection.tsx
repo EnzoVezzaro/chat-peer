@@ -250,6 +250,8 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
             const newChannels = channelData.filter(c => !existingIds.has(c.id));
             return [...prev, ...newChannels];
           });
+          console.log('here: channel receive: ', channels, channelData);
+          
           break;
         }
           
@@ -305,12 +307,12 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   }, [userId, username, channels, currentChannelId, servers]);
 
   // Connect to a peer
-  const connectToPeer = useCallback((peerId: string) => {
+  const connectToPeer = useCallback((peerId: string, channelId: string | null) => {
     if (!peerRef.current || peerId === userId) return;
-    
+
     // Don't reconnect if already connected
     if (connectionsRef.current[peerId]) return;
-    
+
     try {
       const conn = peerRef.current.connect(peerId);
       setupConnection(conn);
@@ -354,7 +356,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       type
     };
 
-    const currentChannel = channels.filter(({ id }) => id === currentChannelId);
+    const currentChannel = channels.find((channel) => channel.id === currentChannelId);
     console.log('check room: ', currentChannel);
 
     // Shared chat
@@ -372,13 +374,15 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       });
     });
 
-    broadcast({
-      type: 'message',
-      payload: {
-        ...message,
-        channelId: currentChannelId
-      }
-    });
+    if (currentChannel && !currentChannel.isPrivate) {
+      broadcast({
+        type: 'message',
+        payload: {
+          ...message,
+          channelId: currentChannelId
+        }
+      });
+    }
 
     return message;
   }, [userId, status, broadcast, sendToPeer, currentChannelId, connectedPeers]);
@@ -518,9 +522,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
         if (localStreamRef.current) {
           callAllPeers();
         }
-        
-        return;
-      }
+      };
       
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       
