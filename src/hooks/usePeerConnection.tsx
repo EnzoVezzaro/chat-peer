@@ -9,7 +9,7 @@ type UsePeerConnectionProps = {
 };
 
 type PeerMessage =
-  | { type: 'message'; payload: Message }
+  | { type: 'message'; payload: Message & { channelId?: string } }
   | { type: 'user-info'; payload: User }
   | { type: 'typing'; payload: { userId: string; isTyping: boolean } }
   | { type: 'read'; payload: { messageId: string } }
@@ -220,10 +220,10 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
             });
           } else {
             // Shared chat
-            setMessages((prev) => [...prev, messageData]);
-            
-            // Update channel messages
             if (currentChannelId) {
+              setMessages((prev) => [...prev, messageData]);
+
+              // Update channel messages
               setChannels(prev => prev.map(channel => {
                 if (channel.id === currentChannelId) {
                   return {
@@ -237,7 +237,6 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           }
           break;
         }
-        
         case 'user-info': {
           const userData = data.payload as User;
           setUsers((prev) => [
@@ -387,7 +386,10 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
 
       broadcast({
         type: 'message',
-        payload: message
+        payload: {
+          ...message,
+          channelId: currentChannelId
+        }
       });
     } else {
       // Personal chat
