@@ -12,11 +12,9 @@ import { ConnectionStatus } from '../types/types';
 
 type ChatAreaProps = {
   messages: MessageType[];
-  personalChats: { [peerId: string]: MessageType[] };
   users: User[];
   currentUserId: string;
   currentChannel?: Channel;
-  connectedPeers: string[];
   onSendMessage: (content: string, type: 'text' | 'image' | 'audio' | 'video', peerId?: string) => void;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
@@ -31,11 +29,9 @@ type ChatAreaProps = {
 
 const ChatArea: React.FC<ChatAreaProps> = ({
   messages,
-  personalChats,
   users,
   currentUserId,
   currentChannel,
-  connectedPeers,
   onSendMessage,
   onToggleAudio,
   onToggleVideo,

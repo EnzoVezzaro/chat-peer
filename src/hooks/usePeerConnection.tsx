@@ -51,7 +51,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           id: 'general',
           name: 'general',
           description: 'General discussion',
-          isPrivate: false,
+          isPrivate: true,
           type: 'text',
           members: [],
           messages: []
@@ -60,7 +60,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           id: 'voice',
           name: 'Voice Chat',
           description: 'Voice channel',
-          isPrivate: false,
+          isPrivate: true,
           type: 'voice',
           members: [],
           messages: []
@@ -69,7 +69,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           id: 'announcements',
           name: 'Announcements',
           description: 'Important announcements',
-          isPrivate: false,
+          isPrivate: true,
           type: 'announcement',
           members: [],
           messages: []
@@ -207,34 +207,19 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       
       switch (data.type) {
         case 'message': {
-          const messageData = data.payload as Message;
-          
-          // Check if it's a personal chat
-          if (conn.peer) {
-            setPersonalChats(prev => {
-              const chat = prev[conn.peer] || [];
-              return {
-                ...prev,
-                [conn.peer]: [...chat, messageData]
-              };
-            });
-          } else {
-            // Shared chat
-            if (currentChannelId) {
-              setMessages((prev) => [...prev, messageData]);
+          const messageData = data.payload as Message & { channelId?: string };
+          setMessages((prev) => [...prev, messageData]);
 
-              // Update channel messages
-              setChannels(prev => prev.map(channel => {
-                if (channel.id === currentChannelId) {
-                  return {
-                    ...channel,
-                    messages: [...channel.messages, messageData]
-                  };
-                }
-                return channel;
-              }));
+          // Update channel messages
+          setChannels(prev => prev.map(channel => {
+            if (channel.id === messageData.channelId) {
+              return {
+                ...channel,
+                messages: [...channel.messages, messageData]
+              };
             }
-          }
+            return channel;
+          }));
           break;
         }
         case 'user-info': {
@@ -347,7 +332,8 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   }, []);
 
   // Send data to all connected peers
-  const broadcast = useCallback((data: PeerMessage) => {
+  const broadcast = useCallback((data: PeerMessage, isPrivate: boolean = false) => {
+    if (isPrivate) return;
     Object.values(connectionsRef.current).forEach(conn => {
       if (conn.open) {
         conn.send(data);
@@ -368,45 +354,31 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       type
     };
 
-    if (currentChannelId) {
-      // Shared chat
-      setMessages((prev) => [...prev, message]);
+    const currentChannel = channels.filter(({ id }) => id === currentChannelId);
+    console.log('check room: ', currentChannel);
 
-      setChannels(prev => {
-        return prev.map(channel => {
-          if (channel.id === currentChannelId) {
-            return {
-              ...channel,
-              messages: [...channel.messages, message]
-            };
-          }
-          return channel;
-        });
-      });
+    // Shared chat
+    setMessages((prev) => [...prev, message]);
 
-      broadcast({
-        type: 'message',
-        payload: {
-          ...message,
-          channelId: currentChannelId
-        }
-      });
-    } else {
-      // Personal chat
-      if (connectedPeers && connectedPeers.length > 0) {
-        const peerId = connectedPeers[0];
-        setPersonalChats(prev => {
+    setChannels(prev => {
+      return prev.map(channel => {
+        if (channel.id === currentChannelId) {
           return {
-            ...prev,
-            [peerId]: [...(prev[peerId] || []), message]
+            ...channel,
+            messages: [...channel.messages, message]
           };
-        });
-        sendToPeer(peerId, {
-          type: 'message',
-          payload: message
-        });
+        }
+        return channel;
+      });
+    });
+
+    broadcast({
+      type: 'message',
+      payload: {
+        ...message,
+        channelId: currentChannelId
       }
-    }
+    });
 
     return message;
   }, [userId, status, broadcast, sendToPeer, currentChannelId, connectedPeers]);
@@ -651,7 +623,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       id: `channel-${Date.now()}`,
       name: name.trim(),
       description: `${name} channel`,
-      isPrivate: false,
+      isPrivate: true,
       type,
       members: [],
       messages: []
@@ -664,7 +636,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     broadcast({
       type: 'channel',
       payload: [channel]
-    });
+    }, channel.isPrivate);
     
     toast.success(`Created ${type} channel: ${name}`);
     
