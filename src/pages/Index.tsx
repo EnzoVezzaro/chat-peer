@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
@@ -22,7 +21,6 @@ const Index = () => {
   const [channelName, setChannelName] = useState('');
   const [channelType, setChannelType] = useState<'text' | 'voice' | 'announcement'>('text');
 
-  // Initialize connection with generated or stored user ID and name
   useEffect(() => {
     const storedUserId = localStorage.getItem('userId');
     const storedUsername = localStorage.getItem('username');
@@ -32,7 +30,6 @@ const Index = () => {
       setUsername(storedUsername);
       setIsSetupDialogOpen(false);
     } else {
-      // Generate a new user ID
       setUserId(`user-${nanoid(8)}`);
     }
   }, []);
@@ -68,7 +65,6 @@ const Index = () => {
       return;
     }
     
-    // Save to local storage
     localStorage.setItem('userId', userId);
     localStorage.setItem('username', username);
     
@@ -95,12 +91,10 @@ const Index = () => {
 
   const currentChannel = channels.find(c => c.id === currentChannelId);
   
-  // Filter messages to current channel
   const currentChannelMessages = currentChannel?.messages || [];
 
   return (
-    <div className="chat-layout">
-      {/* User setup dialog */}
+    <div className="chat-layout bg-[#313338]">
       <Dialog open={isSetupDialogOpen} onOpenChange={setIsSetupDialogOpen}>
         <DialogContent className="sm:max-w-md glass-panel">
           <form onSubmit={handleSubmitUsername}>
@@ -157,7 +151,6 @@ const Index = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Create Channel Dialog */}
       <Dialog open={isCreateChannelDialogOpen} onOpenChange={setIsCreateChannelDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <form onSubmit={handleCreateChannel}>
@@ -191,7 +184,6 @@ const Index = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Invite Dialog */}
       <InviteDialog 
         isOpen={isInviteDialogOpen}
         onClose={() => setIsInviteDialogOpen(false)}
@@ -199,10 +191,8 @@ const Index = () => {
         currentUserId={userId}
       />
       
-      {/* Main chat interface */}
       {!isSetupDialogOpen && (
-        <div className="flex h-screen overflow-hidden bg-[#313338]">
-          {/* Channel list */}
+        <div className="flex h-screen w-full overflow-hidden bg-[#313338]">
           <ChannelList 
             channels={channels}
             currentChannelId={currentChannelId || undefined}
@@ -211,7 +201,6 @@ const Index = () => {
             isAdmin={true}
           />
           
-          {/* Chat area */}
           <ChatArea
             messages={currentChannelMessages}
             users={users}
@@ -228,7 +217,6 @@ const Index = () => {
             isVideoEnabled={isVideoEnabled}
           />
           
-          {/* Video overlay */}
           <VideoOverlay
             localStream={localStream}
             remoteStreams={userStreams}
@@ -240,7 +228,6 @@ const Index = () => {
             onToggleVideo={toggleVideo}
           />
           
-          {/* Connection status */}
           <ConnectionStatus status={status} />
         </div>
       )}
