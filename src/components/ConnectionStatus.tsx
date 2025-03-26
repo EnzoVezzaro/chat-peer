@@ -8,7 +8,7 @@ type ConnectionStatusProps = {
   status: Status;
 };
 
-const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status }) => {
+const ConnectionStatusComponent: React.FC<ConnectionStatusProps> = ({ status }) => {
   return (
     <div 
       className={cn(
@@ -34,4 +34,4 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ status }) => {
   );
 };
 
-export default ConnectionStatus;
+export default ConnectionStatusComponent;

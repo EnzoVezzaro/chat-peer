@@ -184,10 +184,10 @@ const Index = () => {
         </DialogContent>
       </Dialog>
       
-      <InviteDialog 
+      <InviteDialog
         isOpen={isInviteDialogOpen}
         onClose={() => setIsInviteDialogOpen(false)}
-        onInvite={connectToPeer}
+        onInvite={(peerId) => connectToPeer(peerId, currentChannelId)}
         currentUserId={userId}
       />
       
@@ -215,6 +215,7 @@ const Index = () => {
             isConnected={status === 'connected'}
             isAudioEnabled={isAudioEnabled}
             isVideoEnabled={isVideoEnabled}
+            statusConnection={status}
           />
           
           <VideoOverlay
@@ -227,8 +228,6 @@ const Index = () => {
             onToggleAudio={toggleAudio}
             onToggleVideo={toggleVideo}
           />
-          
-          <ConnectionStatus status={status} />
         </div>
       )}
     </div>

@@ -10,7 +10,7 @@ import { Copy } from 'lucide-react';
 type InviteDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  onInvite: (peerId: string) => void;
+  onInvite: (peerId: string, channelId?: string) => void;
   currentUserId: string;
 };
 
@@ -35,7 +35,7 @@ const InviteDialog: React.FC<InviteDialogProps> = ({
       return;
     }
     
-    onInvite(peerId.trim());
+    onInvite(peerId.trim(), currentUserId);
     setPeerId('');
     onClose();
   };
@@ -96,7 +96,10 @@ const InviteDialog: React.FC<InviteDialogProps> = ({
             <Button variant="secondary" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Invite</Button>
+            <Button type="submit" onClick={() => {
+              onInvite(peerId, currentUserId);
+              onClose();
+            }}>Invite</Button>
           </DialogFooter>
         </form>
       </DialogContent>

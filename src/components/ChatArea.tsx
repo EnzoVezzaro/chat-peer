@@ -8,6 +8,8 @@ import { Hash, Users, Video, Share, Mic, MicOff, VideoOff, Image, PlusCircle, Sm
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import ConnectionStatusComponent from './ConnectionStatus';
+import { ConnectionStatus } from '../types/types';
 
 type ChatAreaProps = {
   messages: MessageType[];
@@ -23,6 +25,7 @@ type ChatAreaProps = {
   isConnected: boolean;
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
+  statusConnection: ConnectionStatus;
 };
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -38,7 +41,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onOpenInviteDialog,
   isConnected,
   isAudioEnabled,
-  isVideoEnabled
+  isVideoEnabled,
+  statusConnection
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMessages, setSortedMessages] = useState<MessageType[]>([]);
@@ -102,6 +106,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <h2 className="font-semibold text-white">{currentChannel.name}</h2>
             
             <div className="ml-auto flex items-center gap-4">
+              <ConnectionStatusComponent status={statusConnection} />
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -240,19 +245,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             disabled={!isConnected}
             placeholder={isConnected ? `Message #${currentChannel?.name || 'channel'}` : "Connect to send messages..."}
           />
-          
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-                  <Smile className="h-5 w-5 text-gray-400 hover:text-white" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                Add emoji
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
       </div>
     </div>
