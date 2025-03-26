@@ -8,15 +8,24 @@ type UsePeerConnectionProps = {
   username: string;
 };
 
-type PeerMessage = {
-  type: 'message' | 'user-info' | 'typing' | 'read' | 'channel' | 'server' | 'media-offer' | 'media-answer' | 'media-end';
-  payload: any;
-};
+type PeerMessage =
+  | { type: 'message'; payload: Message }
+  | { type: 'user-info'; payload: User }
+  | { type: 'typing'; payload: { userId: string; isTyping: boolean } }
+  | { type: 'read'; payload: { messageId: string } }
+  | { type: 'channel'; payload: Channel[] }
+  | { type: 'server'; payload: Server[] }
+  | { type: 'media-offer'; payload: { sdp: string; type: 'offer' } }
+  | { type: 'media-answer'; payload: { sdp: string; type: 'answer' } }
+  | { type: 'media-end'; payload: { userId: string } };
+
+type PersonalChats = { [peerId: string]: Message[] };
 
 const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [personalChats, setPersonalChats] = useState<PersonalChats>({});
   const [channels, setChannels] = useState<Channel[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null);
@@ -197,33 +206,48 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       console.log('Received data:', data);
       
       switch (data.type) {
-        case 'message':
+        case 'message': {
           const messageData = data.payload as Message;
-          setMessages((prev) => [...prev, messageData]);
           
-          // Update channel messages
-          if (currentChannelId) {
-            setChannels(prev => prev.map(channel => {
-              if (channel.id === currentChannelId) {
-                return {
-                  ...channel,
-                  messages: [...channel.messages, messageData]
-                };
-              }
-              return channel;
-            }));
+          // Check if it's a personal chat
+          if (conn.peer) {
+            setPersonalChats(prev => {
+              const chat = prev[conn.peer] || [];
+              return {
+                ...prev,
+                [conn.peer]: [...chat, messageData]
+              };
+            });
+          } else {
+            // Shared chat
+            setMessages((prev) => [...prev, messageData]);
+            
+            // Update channel messages
+            if (currentChannelId) {
+              setChannels(prev => prev.map(channel => {
+                if (channel.id === currentChannelId) {
+                  return {
+                    ...channel,
+                    messages: [...channel.messages, messageData]
+                  };
+                }
+                return channel;
+              }));
+            }
           }
           break;
+        }
         
-        case 'user-info':
+        case 'user-info': {
           const userData = data.payload as User;
           setUsers((prev) => [
             ...prev.filter(u => u.id !== userData.id),
             userData
           ]);
           break;
+        }
           
-        case 'typing':
+        case 'typing': {
           const typingData = data.payload as { userId: string; isTyping: boolean };
           setUsers(prev => prev.map(user => {
             if (user.id === typingData.userId) {
@@ -232,8 +256,9 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
             return user;
           }));
           break;
+        }
           
-        case 'channel':
+        case 'channel': {
           const channelData = data.payload as Channel[];
           setChannels(prev => {
             // Merge with existing channels
@@ -242,8 +267,9 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
             return [...prev, ...newChannels];
           });
           break;
+        }
           
-        case 'server':
+        case 'server': {
           const serverData = data.payload as Server[];
           setServers(prev => {
             // Merge with existing servers
@@ -252,18 +278,22 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
             return [...prev, ...newServers];
           });
           break;
+        }
           
-        case 'media-offer':
+        case 'media-offer': {
           // Handle media offer (for future implementation)
           break;
+        }
           
-        case 'media-answer':
+        case 'media-answer': {
           // Handle media answer (for future implementation)
           break;
+        }
           
-        case 'media-end':
+        case 'media-end': {
           // Handle media end (for future implementation)
           break;
+        }
       }
     });
 
@@ -329,7 +359,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   // Send a message
   const sendMessage = useCallback((content: string, type: 'text' | 'image' | 'audio' | 'video' = 'text') => {
     if ((!content.trim() && type === 'text') || status !== 'connected') return;
-    
+
     const message: Message = {
       id: `${userId}-${Date.now()}`,
       content,
@@ -338,31 +368,46 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       read: false,
       type
     };
-    
-    // Add to local messages
-    setMessages((prev) => [...prev, message]);
-    
-    // Add to current channel messages
+
     if (currentChannelId) {
-      setChannels(prev => prev.map(channel => {
-        if (channel.id === currentChannelId) {
+      // Shared chat
+      setMessages((prev) => [...prev, message]);
+
+      setChannels(prev => {
+        return prev.map(channel => {
+          if (channel.id === currentChannelId) {
+            return {
+              ...channel,
+              messages: [...channel.messages, message]
+            };
+          }
+          return channel;
+        });
+      });
+
+      broadcast({
+        type: 'message',
+        payload: message
+      });
+    } else {
+      // Personal chat
+      if (connectedPeers && connectedPeers.length > 0) {
+        const peerId = connectedPeers[0];
+        setPersonalChats(prev => {
           return {
-            ...channel,
-            messages: [...channel.messages, message]
+            ...prev,
+            [peerId]: [...(prev[peerId] || []), message]
           };
-        }
-        return channel;
-      }));
+        });
+        sendToPeer(peerId, {
+          type: 'message',
+          payload: message
+        });
+      }
     }
-    
-    // Send to all peers
-    broadcast({
-      type: 'message',
-      payload: message
-    });
-    
+
     return message;
-  }, [userId, status, broadcast, currentChannelId]);
+  }, [userId, status, broadcast, sendToPeer, currentChannelId, connectedPeers]);
 
   // Update typing status
   const updateTypingStatus = useCallback((isUserTyping: boolean) => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { SendHorizontal } from 'lucide-react';
@@ -10,8 +9,8 @@ type MessageInputProps = {
   placeholder?: string;
 };
 
-const MessageInput: React.FC<MessageInputProps> = ({ 
-  onSendMessage, 
+const MessageInput: React.FC<MessageInputProps> = ({
+  onSendMessage,
   disabled = false,
   placeholder = "Type a message..."
 }) => {
@@ -30,7 +29,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (trimmedMessage && !disabled) {
       onSendMessage(trimmedMessage);
       setMessage('');
-      
+
       // Refocus textarea
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -56,7 +55,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
           rows={1}
         />
       </div>
-      
+
       <Button
         onClick={sendMessage}
         disabled={!message.trim() || disabled}
