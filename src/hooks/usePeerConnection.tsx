@@ -343,6 +343,21 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     });
   }, []);
 
+  // Update channel
+  const updateChannelPrivacy = (privacy: boolean) => {
+    setChannels(prev => {
+      return prev.map(channel => {
+        if (channel.id === currentChannelId) {
+          return {
+            ...channel,
+            isPrivate: privacy
+          };
+        }
+        return channel;
+      });
+    });
+  };
+
   // Send a message
   const sendMessage = useCallback((content: string, type: 'text' | 'image' | 'audio' | 'video' = 'text') => {
     if ((!content.trim() && type === 'text') || status !== 'connected') return;
@@ -718,6 +733,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     createServer,
     selectChannel,
     selectServer,
+    updateChannelPrivacy,
     disconnect
   };
 };

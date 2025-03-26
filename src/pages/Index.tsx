@@ -189,6 +189,7 @@ const Index = () => {
         onClose={() => setIsInviteDialogOpen(false)}
         onInvite={(peerId) => connectToPeer(peerId, currentChannelId)}
         currentUserId={userId}
+        username={username}
       />
       
       {!isSetupDialogOpen && (
