@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { UserAvatar } from './UserAvatar';
+import UserAvatar from './UserAvatar';
 import { Server } from '@/types/types';
 import { Plus, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';

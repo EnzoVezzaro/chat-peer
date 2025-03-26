@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Peer, { DataConnection } from 'peerjs';
 import { toast } from 'sonner';
@@ -625,80 +624,24 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     return channel;
   }, [broadcast]);
 
-  // Create a new server
+  // Create a new server (which is a channel)
   const createServer = useCallback((name: string) => {
     if (!name.trim()) return;
     
-    const serverId = `server-${Date.now()}`;
-    
-    // Create default channels for server
-    const generalChannel: Channel = {
-      id: `${serverId}-general`,
-      name: 'general',
-      description: 'General discussion',
-      isPrivate: false,
-      type: 'text',
-      members: [],
-      messages: []
-    };
-    
-    const voiceChannel: Channel = {
-      id: `${serverId}-voice`,
-      name: 'Voice Chat',
-      description: 'Voice channel',
-      isPrivate: false,
-      type: 'voice',
-      members: [],
-      messages: []
-    };
-    
-    // Add channels
-    setChannels(prev => [...prev, generalChannel, voiceChannel]);
-    
-    const server: Server = {
-      id: serverId,
-      name: name.trim(),
-      ownerId: userId,
-      channels: [generalChannel.id, voiceChannel.id],
-      members: [userId]
-    };
-    
-    setServers(prev => [...prev, server]);
-    setCurrentServerId(server.id);
-    setCurrentChannelId(generalChannel.id);
-    
-    // Broadcast new server and channels
-    broadcast({
-      type: 'server',
-      payload: [server]
-    });
-    
-    broadcast({
-      type: 'channel',
-      payload: [generalChannel, voiceChannel]
-    });
-    
-    toast.success(`Created server: ${name}`);
-    
-    return server;
-  }, [broadcast, userId]);
+    // Create a channel instead
+    return createChannel(name, 'text');
+  }, [createChannel]);
 
   // Select channel
   const selectChannel = useCallback((channelId: string) => {
     setCurrentChannelId(channelId);
   }, []);
 
-  // Select server
+  // Select server (just a wrapper to keep API compatibility)
   const selectServer = useCallback((serverId: string) => {
-    setCurrentServerId(serverId);
-    
-    // Get first channel of server
-    const server = servers.find(s => s.id === serverId);
-    if (server && server.channels.length > 0) {
-      const firstChannelId = server.channels[0];
-      setCurrentChannelId(firstChannelId);
-    }
-  }, [servers]);
+    // Treat servers as channels
+    selectChannel(serverId);
+  }, [selectChannel]);
 
   // Disconnect from all peers and server
   const disconnect = useCallback(() => {
@@ -742,6 +685,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     isAudioEnabled,
     isVideoEnabled,
     isScreenSharing,
+    localStream: localStreamRef.current,
     connectToPeer,
     sendMessage,
     updateTypingStatus,

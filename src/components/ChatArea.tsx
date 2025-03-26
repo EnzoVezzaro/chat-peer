@@ -1,11 +1,13 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Message as MessageType, User, Channel } from '@/types/types';
 import Message from './Message';
 import MessageInput from './MessageInput';
-import { Hash, Users, Video, Phone, Mic, MicOff, Video as VideoIcon, VideoOff, Image, PlusCircle, Smile } from 'lucide-react';
+import { Hash, Users, Video, Share, Mic, MicOff, VideoOff, Image, PlusCircle, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type ChatAreaProps = {
   messages: MessageType[];
@@ -17,6 +19,7 @@ type ChatAreaProps = {
   onToggleVideo: () => void;
   onShareScreen: () => void;
   onUploadImage: (file: File) => void;
+  onOpenInviteDialog: () => void;
   isConnected: boolean;
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
@@ -32,6 +35,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   onToggleVideo,
   onShareScreen,
   onUploadImage,
+  onOpenInviteDialog,
   isConnected,
   isAudioEnabled,
   isVideoEnabled
@@ -98,31 +102,67 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             <h2 className="font-semibold text-white">{currentChannel.name}</h2>
             
             <div className="ml-auto flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={onToggleVideo}>
-                {isVideoEnabled ? (
-                  <VideoIcon className="h-5 w-5 text-gray-400 hover:text-white" />
-                ) : (
-                  <VideoOff className="h-5 w-5 text-gray-400 hover:text-white" />
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={onToggleVideo}>
+                      {isVideoEnabled ? (
+                        <Video className="h-5 w-5 text-gray-400 hover:text-white" />
+                      ) : (
+                        <VideoOff className="h-5 w-5 text-gray-400 hover:text-white" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isVideoEnabled ? 'Turn off camera' : 'Turn on camera'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
-              <Button variant="ghost" size="icon" onClick={onToggleAudio}>
-                {isAudioEnabled ? (
-                  <Mic className="h-5 w-5 text-gray-400 hover:text-white" />
-                ) : (
-                  <MicOff className="h-5 w-5 text-gray-400 hover:text-white" />
-                )}
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={onToggleAudio}>
+                      {isAudioEnabled ? (
+                        <Mic className="h-5 w-5 text-gray-400 hover:text-white" />
+                      ) : (
+                        <MicOff className="h-5 w-5 text-gray-400 hover:text-white" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isAudioEnabled ? 'Mute microphone' : 'Unmute microphone'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
-              <Button variant="ghost" size="icon" onClick={onShareScreen}>
-                <Phone className="h-5 w-5 text-gray-400 hover:text-white" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={onShareScreen}>
+                      <Share className="h-5 w-5 text-gray-400 hover:text-white" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Share your screen
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
               <Separator orientation="vertical" className="h-6 bg-gray-700" />
               
-              <Button variant="ghost" size="icon">
-                <Users className="h-5 w-5 text-gray-400 hover:text-white" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={onOpenInviteDialog}>
+                      <Users className="h-5 w-5 text-gray-400 hover:text-white" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Invite users
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </>
         )}
@@ -169,14 +209,23 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       
       <div className="message-input-container p-4 bg-[#313338]">
         <div className="flex items-center">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-10 w-10 rounded-full"
-            onClick={handleImageUpload}
-          >
-            <PlusCircle className="h-5 w-5 text-gray-400 hover:text-white" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-10 w-10 rounded-full"
+                  onClick={handleImageUpload}
+                >
+                  <PlusCircle className="h-5 w-5 text-gray-400 hover:text-white" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Upload an image
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <input
             type="file"
@@ -190,12 +239,20 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             onSendMessage={(content) => onSendMessage(content, 'text')}
             disabled={!isConnected}
             placeholder={isConnected ? `Message #${currentChannel?.name || 'channel'}` : "Connect to send messages..."}
-            className="flex-1 bg-[#383a40] border-0 focus-visible:ring-0 text-white placeholder-gray-400"
           />
           
-          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-            <Smile className="h-5 w-5 text-gray-400 hover:text-white" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
+                  <Smile className="h-5 w-5 text-gray-400 hover:text-white" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Add emoji
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

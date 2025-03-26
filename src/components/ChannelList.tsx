@@ -5,13 +5,14 @@ import { Channel, Server } from '@/types/types';
 import { Button } from '@/components/ui/button';
 import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type ChannelListProps = {
   server?: Server;
   channels: Channel[];
   currentChannelId?: string;
   onSelectChannel: (channelId: string) => void;
-  onCreateChannel: () => void;
+  onCreateChannel: (type: 'text' | 'voice' | 'announcement') => void;
   isAdmin: boolean;
 };
 
@@ -52,7 +53,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
   };
 
   const renderChannelList = (categoryName: string, categoryChannels: Channel[], type: Channel['type']) => {
-    if (categoryChannels.length === 0) return null;
+    if (categoryChannels.length === 0 && type !== 'text') return null;
     
     return (
       <Collapsible
@@ -68,18 +69,28 @@ const ChannelList: React.FC<ChannelListProps> = ({
               <ChevronRight className="h-3 w-3 mr-1" />
             )}
             {categoryName}
+            
             {isAdmin && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-4 w-4 ml-auto p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCreateChannel();
-                }}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-4 w-4 ml-auto p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCreateChannel(type);
+                      }}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Create new {type} channel
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </CollapsibleTrigger>
