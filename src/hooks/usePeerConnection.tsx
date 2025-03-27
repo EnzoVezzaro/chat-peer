@@ -43,9 +43,42 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
 
-  // Default channels
+  // Initialize with stored data
   useEffect(() => {
-    if (!channels.length) {
+    const storedData = localStorage.getItem('chatData');
+    if (storedData) {
+      try {
+        const { users, messages, channels } = JSON.parse(storedData);
+        
+        // Set initial state with stored data
+        setUsers(users || []);
+        setMessages(messages || []);
+        
+        // If we have channels, use them
+        if (channels?.length) {
+          setChannels(channels);
+          setCurrentChannelId(channels[0]?.id || null);
+        } else {
+          // Otherwise create default channel
+          const defaultChannels: Channel[] = [
+            {
+              id: 'general',
+              name: 'general',
+              description: 'General discussion',
+              isPrivate: true,
+              type: 'text',
+              members: [],
+              messages: []
+            },
+          ];
+          setChannels(defaultChannels);
+          setCurrentChannelId('general');
+        }
+      } catch (error) {
+        console.error('Error parsing stored chat data:', error);
+      }
+    } else {
+      // No stored data, create default channel
       const defaultChannels: Channel[] = [
         {
           id: 'general',
@@ -57,15 +90,14 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           messages: []
         },
       ];
-      
       setChannels(defaultChannels);
       setCurrentChannelId('general');
     }
-  }, [channels.length]);
+  }, []);
 
-  // Initialize peer connection
+  // Initialize peer connection after state is initialized
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !channels.length) return;
 
     const initPeer = async () => {
       setStatus('connecting');
