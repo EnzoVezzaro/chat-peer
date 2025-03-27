@@ -39,7 +39,7 @@ const VideoOverlay: React.FC<VideoOverlayProps> = ({
   }
   
   return (
-    <div className="video-overlay fixed bottom-4 right-4 flex flex-col gap-2 z-50">
+    <div className="flex flex-col gap-2 w-full">
       {/* Local video */}
       {localStream && (
         <div className="local-video relative rounded-lg overflow-hidden shadow-lg border border-[#2b2d31]">
@@ -48,7 +48,7 @@ const VideoOverlay: React.FC<VideoOverlayProps> = ({
             autoPlay
             muted
             playsInline
-            className="w-64 h-48 object-cover bg-black"
+            className="w-full h-48 object-cover bg-black"
           />
           <div className="absolute bottom-2 right-2 flex items-center gap-1">
             <button 

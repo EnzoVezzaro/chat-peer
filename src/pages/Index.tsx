@@ -220,17 +220,8 @@ const Index = () => {
             isAudioEnabled={isAudioEnabled}
             isVideoEnabled={isVideoEnabled}
             statusConnection={status}
-          />
-          
-          <VideoOverlay
             localStream={localStream}
-            remoteStreams={userStreams}
-            users={users}
-            currentUserId={userId}
-            isAudioEnabled={isAudioEnabled}
-            isVideoEnabled={isVideoEnabled}
-            onToggleAudio={toggleAudio}
-            onToggleVideo={toggleVideo}
+            userStreams={userStreams}
           />
         </div>
       )}

@@ -115,15 +115,30 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           if (localStreamRef.current) {
             call.answer(localStreamRef.current);
           } else {
-            call.answer(); // Answer without sending stream
+            // Try to get media if not available
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+              .then(stream => {
+                localStreamRef.current = stream;
+                call.answer(stream);
+              })
+              .catch(() => call.answer());
           }
           
           call.on('stream', (remoteStream) => {
-            console.log('Received remote stream', remoteStream);
+            console.log('Received remote stream from', call.peer);
             setUserStreams(prev => ({
               ...prev,
               [call.peer]: remoteStream
             }));
+          });
+
+          call.on('close', () => {
+            console.log('Call ended with', call.peer);
+            setUserStreams(prev => {
+              const newStreams = {...prev};
+              delete newStreams[call.peer];
+              return newStreams;
+            });
           });
         });
 
@@ -307,7 +322,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   }, [userId, username, channels, currentChannelId, servers]);
 
   // Connect to a peer
-  const connectToPeer = useCallback((peerId: string, channelId: string | null) => {
+  const connectToPeer = useCallback(async (peerId: string, channelId: string | null) => {
     if (!peerRef.current || peerId === userId) return;
 
     // Don't reconnect if already connected
@@ -317,11 +332,45 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       const conn = peerRef.current.connect(peerId);
       setupConnection(conn);
       toast.success(`Connecting to ${peerId}...`);
+
+      // Ensure we have media before initiating call
+      if (!localStreamRef.current && isVideoEnabled) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: isAudioEnabled 
+          });
+          localStreamRef.current = stream;
+        } catch (error) {
+          console.error('Failed to get media:', error);
+        }
+      }
+
+      // Initiate call if we have a local stream
+      if (localStreamRef.current) {
+        const call = peerRef.current.call(peerId, localStreamRef.current);
+        call.on('stream', (remoteStream) => {
+          console.log('Received remote stream from call to', peerId);
+          setUserStreams(prev => ({
+            ...prev,
+            [peerId]: remoteStream
+          }));
+        });
+        
+        call.on('close', () => {
+          console.log('Call ended with', peerId);
+          setUserStreams(prev => {
+            const newStreams = {...prev};
+            delete newStreams[peerId];
+            return newStreams;
+          });
+        });
+      }
     } catch (error) {
       console.error('Failed to connect to peer:', error);
       toast.error(`Failed to connect to ${peerId}`);
     }
-  }, [userId, setupConnection]);
+  }, [userId, setupConnection, isVideoEnabled, isAudioEnabled]);
 
   // Send data to a specific peer
   const sendToPeer = useCallback((peerId: string, data: PeerMessage) => {

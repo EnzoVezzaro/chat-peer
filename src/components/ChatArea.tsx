@@ -3,7 +3,8 @@ import { cn } from '@/lib/utils';
 import { Message as MessageType, User, Channel } from '@/types/types';
 import Message from './Message';
 import MessageInput from './MessageInput';
-import { Hash, Users, Video, Share, Mic, MicOff, VideoOff, Image, PlusCircle, Smile } from 'lucide-react';
+import { Hash, Users, Video, Share, Mic, MicOff, VideoOff, PlusCircle } from 'lucide-react';
+import VideoOverlay from './VideoOverlay';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -25,6 +26,8 @@ type ChatAreaProps = {
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
   statusConnection: ConnectionStatus;
+  localStream: MediaStream | null;
+  userStreams: {[userId: string]: MediaStream};
 };
 
 const ChatArea: React.FC<ChatAreaProps> = ({
@@ -41,7 +44,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   isConnected,
   isAudioEnabled,
   isVideoEnabled,
-  statusConnection
+  statusConnection,
+  localStream,
+  userStreams
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sortedMessages, setSortedMessages] = useState<MessageType[]>([]);
@@ -174,7 +179,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         )}
       </div>
 
-      <div className="message-list flex-1 overflow-y-auto p-4 space-y-4 bg-[#313338]">
+      <div className="flex flex-1 overflow-hidden">
+        <div className="message-list flex-1 overflow-y-auto p-4 space-y-4 bg-[#313338]">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <Hash className="h-16 w-16 mb-4 text-gray-600" />
@@ -210,7 +216,36 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <div className={cn(
+          "video-sidebar w-80 border-l border-[#1e1f22] bg-[#2b2d31] p-2 overflow-y-auto relative transition-all duration-300 ease-in-out",
+          isVideoEnabled ? "translate-x-0" : "translate-x-full"
+        )}>
+          <button 
+            className="absolute top-2 right-2 z-50 p-2 rounded-full bg-[#2b2d31] hover:bg-[#404348] shadow-lg"
+            onClick={onToggleVideo}
+            aria-label="Close video"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          {isVideoEnabled && (
+            <VideoOverlay
+              localStream={localStream}
+              remoteStreams={userStreams}
+              users={users}
+              currentUserId={currentUserId}
+              isAudioEnabled={isAudioEnabled}
+              isVideoEnabled={isVideoEnabled}
+              onToggleAudio={onToggleAudio}
+              onToggleVideo={onToggleVideo}
+            />
+          )}
+        </div>
       </div>
 
       <div className="message-input-container p-4 bg-[#313338]">
