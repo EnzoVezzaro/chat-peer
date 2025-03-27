@@ -56,24 +56,6 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           members: [],
           messages: []
         },
-        {
-          id: 'voice',
-          name: 'Voice Chat',
-          description: 'Voice channel',
-          isPrivate: true,
-          type: 'voice',
-          members: [],
-          messages: []
-        },
-        {
-          id: 'announcements',
-          name: 'Announcements',
-          description: 'Important announcements',
-          isPrivate: true,
-          type: 'announcement',
-          members: [],
-          messages: []
-        }
       ];
       
       setChannels(defaultChannels);
@@ -350,7 +332,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       if (localStreamRef.current) {
         const call = peerRef.current.call(peerId, localStreamRef.current);
         call.on('stream', (remoteStream) => {
-          console.log('Received remote stream from call to', peerId);
+          console.log('Received remote stream from', peerId);
           setUserStreams(prev => ({
             ...prev,
             [peerId]: remoteStream
@@ -428,7 +410,9 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
 
     setChannels(prev => {
       return prev.map(channel => {
+        console.log('aqui 1: ', channel.id, currentChannelId);
         if (channel.id === currentChannelId) {
+          console.log('aqui 2');
           return {
             ...channel,
             messages: [...channel.messages, message]
@@ -460,7 +444,7 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
     }
 
     return message;
-  }, [userId, status, broadcast, sendToPeer, currentChannelId, connectedPeers]);
+  }, [userId, status, broadcast, sendToPeer, currentChannelId, connectedPeers, channels]);
 
   // Update typing status
   const updateTypingStatus = useCallback((isUserTyping: boolean) => {
@@ -601,201 +585,201 @@ const toggleVideo = useCallback(async () => {
   } catch (error) {
     console.error('Error toggling video:', error);
     toast.error('Failed to toggle camera');
-  }
-}, [isAudioEnabled, callAllPeers]);
-
-  // Share screen
-  const shareScreen = useCallback(async () => {
-    try {
-      if (isScreenSharing && screenStreamRef.current) {
-        // Stop screen sharing
-        screenStreamRef.current.getTracks().forEach(track => track.stop());
-        screenStreamRef.current = null;
-        setIsScreenSharing(false);
-        toast.success('Screen sharing stopped');
-        
-        // Restore previous stream if available
-        if (localStreamRef.current) {
-          callAllPeers();
-        }
-      };
-      
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      
-      // Add event listener for when user stops sharing
-      stream.getVideoTracks()[0].onended = () => {
-        setIsScreenSharing(false);
-        screenStreamRef.current = null;
-        toast.success('Screen sharing stopped');
-        
-        // Restore previous stream if available
-        if (localStreamRef.current) {
-          callAllPeers();
-        }
-      };
-      
-      screenStreamRef.current = stream;
-      setIsScreenSharing(true);
-      toast.success('Screen sharing started');
-      
-      // Call all peers with screen share
-      callAllPeersWithScreen();
-      
-    } catch (error) {
-      console.error('Error sharing screen:', error);
-      toast.error('Failed to share screen');
     }
-  }, [isScreenSharing]);
+    }, [isAudioEnabled, callAllPeers]);
 
-  // Call all peers with screen share
-  const callAllPeersWithScreen = useCallback(() => {
-    if (!peerRef.current || !screenStreamRef.current) return;
-    
-    connectedPeers.forEach(peerId => {
-      try {
-        const call = peerRef.current!.call(peerId, screenStreamRef.current!);
-        
-        call.on('stream', (remoteStream) => {
-          console.log('Received remote stream from', peerId);
-          setUserStreams(prev => ({
-            ...prev,
-            [peerId]: remoteStream
-          }));
+    // Share screen
+    const shareScreen = useCallback(async () => {
+        try {
+            if (isScreenSharing && screenStreamRef.current) {
+                // Stop screen sharing
+                screenStreamRef.current.getTracks().forEach(track => track.stop());
+                screenStreamRef.current = null;
+                setIsScreenSharing(false);
+                toast.success('Screen sharing stopped');
+
+                // Restore previous stream if available
+                if (localStreamRef.current) {
+                    callAllPeers();
+                }
+            };
+
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+
+            // Add event listener for when user stops sharing
+            stream.getVideoTracks()[0].onended = () => {
+                setIsScreenSharing(false);
+                screenStreamRef.current = null;
+                toast.success('Screen sharing stopped');
+
+                // Restore previous stream if available
+                if (localStreamRef.current) {
+                    callAllPeers();
+                }
+            };
+
+            screenStreamRef.current = stream;
+            setIsScreenSharing(true);
+            toast.success('Screen sharing started');
+
+            // Call all peers with screen share
+            callAllPeersWithScreen();
+
+        } catch (error) {
+            console.error('Error sharing screen:', error);
+            toast.error('Failed to share screen');
+        }
+    }, [isScreenSharing]);
+
+    // Call all peers with screen share
+    const callAllPeersWithScreen = useCallback(() => {
+        if (!peerRef.current || !screenStreamRef.current) return;
+
+        connectedPeers.forEach(peerId => {
+            try {
+                const call = peerRef.current!.call(peerId, screenStreamRef.current!);
+
+                call.on('stream', (remoteStream) => {
+                    console.log('Received remote stream from', peerId);
+                    setUserStreams(prev => ({
+                        ...prev,
+                        [peerId]: remoteStream
+                    }));
+                });
+            } catch (error) {
+                console.error('Error calling peer with screen:', error);
+            }
         });
-      } catch (error) {
-        console.error('Error calling peer with screen:', error);
-      }
-    });
-  }, [connectedPeers]);
+    }, [connectedPeers]);
 
-  // Upload and share image
-  const uploadImage = useCallback(async (file: File) => {
-    try {
-      if (!file) return;
-      
-      // Convert file to data URL
-      const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        if (event.target && event.target.result) {
-          const imageDataUrl = event.target.result as string;
-          
-          // Send image message
-          sendMessage(imageDataUrl, 'image');
+    // Upload and share image
+    const uploadImage = useCallback(async (file: File) => {
+        try {
+            if (!file) return;
+
+            // Convert file to data URL
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                if (event.target && event.target.result) {
+                    const imageDataUrl = event.target.result as string;
+
+                    // Send image message
+                    sendMessage(imageDataUrl, 'image');
+                }
+            };
+
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            toast.error('Failed to upload image');
         }
-      };
-      
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('Failed to upload image');
-    }
-  }, [sendMessage]);
+    }, [sendMessage]);
 
-  // Create a new channel
-  const createChannel = useCallback((name: string, type: 'text' | 'voice' | 'announcement' = 'text') => {
-    if (!name.trim()) return;
-    
-    const channel: Channel = {
-      id: `channel-${Date.now()}`,
-      name: name.trim(),
-      description: `${name} channel`,
-      isPrivate: true,
-      type,
-      members: [],
-      messages: []
+    // Create a new channel
+    const createChannel = useCallback((name: string, type: 'text' | 'voice' | 'announcement' = 'text') => {
+        if (!name.trim()) return;
+
+        const channel: Channel = {
+            id: `channel-${Date.now()}`,
+            name: name.trim(),
+            description: `${name} channel`,
+            isPrivate: true,
+            type,
+            members: [],
+            messages: []
+        };
+
+        setChannels(prev => [...prev, channel]);
+        setCurrentChannelId(channel.id);
+
+        // Broadcast new channel
+        broadcast({
+            type: 'channel',
+            payload: [channel]
+        }, channel.isPrivate);
+
+        toast.success(`Created ${type} channel: ${name}`);
+
+        return channel;
+    }, [broadcast]);
+
+    // Create a new server (which is a channel)
+    const createServer = useCallback((name: string) => {
+        if (!name.trim()) return;
+
+        // Create a channel instead
+        return createChannel(name, 'text');
+    }, [createChannel]);
+
+    // Select channel
+    const selectChannel = useCallback((channelId: string) => {
+        setCurrentChannelId(channelId);
+    }, []);
+
+    // Select server (just a wrapper to keep API compatibility)
+    const selectServer = useCallback((serverId: string) => {
+        // Treat servers as channels
+        selectChannel(serverId);
+    }, [selectChannel]);
+
+    // Disconnect from all peers and server
+    const disconnect = useCallback(() => {
+        if (peerRef.current) {
+            Object.values(connectionsRef.current).forEach(conn => {
+                conn.close();
+            });
+
+            peerRef.current.disconnect();
+            setStatus('disconnected');
+            connectionsRef.current = {};
+            setConnectedPeers([]);
+
+            // Stop media streams
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => track.stop());
+                localStreamRef.current = null;
+            }
+
+            if (screenStreamRef.current) {
+                screenStreamRef.current.getTracks().forEach(track => track.stop());
+                screenStreamRef.current = null;
+            }
+
+            setIsAudioEnabled(false);
+            setIsVideoEnabled(false);
+            setIsScreenSharing(false);
+        }
+    }, []);
+
+    return {
+        status,
+        users,
+        messages,
+        channels,
+        servers,
+        currentChannelId,
+        currentServerId,
+        connectedPeers,
+        userStreams,
+        isAudioEnabled,
+        isVideoEnabled,
+        isScreenSharing,
+        localStream: localStreamRef.current,
+        connectToPeer,
+        sendMessage,
+        updateTypingStatus,
+        toggleAudio,
+        toggleVideo,
+        shareScreen,
+        uploadImage,
+        createChannel,
+        createServer,
+        selectChannel,
+        selectServer,
+        updateChannelPrivacy,
+        disconnect
     };
-    
-    setChannels(prev => [...prev, channel]);
-    setCurrentChannelId(channel.id);
-    
-    // Broadcast new channel
-    broadcast({
-      type: 'channel',
-      payload: [channel]
-    }, channel.isPrivate);
-    
-    toast.success(`Created ${type} channel: ${name}`);
-    
-    return channel;
-  }, [broadcast]);
-
-  // Create a new server (which is a channel)
-  const createServer = useCallback((name: string) => {
-    if (!name.trim()) return;
-    
-    // Create a channel instead
-    return createChannel(name, 'text');
-  }, [createChannel]);
-
-  // Select channel
-  const selectChannel = useCallback((channelId: string) => {
-    setCurrentChannelId(channelId);
-  }, []);
-
-  // Select server (just a wrapper to keep API compatibility)
-  const selectServer = useCallback((serverId: string) => {
-    // Treat servers as channels
-    selectChannel(serverId);
-  }, [selectChannel]);
-
-  // Disconnect from all peers and server
-  const disconnect = useCallback(() => {
-    if (peerRef.current) {
-      Object.values(connectionsRef.current).forEach(conn => {
-        conn.close();
-      });
-      
-      peerRef.current.disconnect();
-      setStatus('disconnected');
-      connectionsRef.current = {};
-      setConnectedPeers([]);
-      
-      // Stop media streams
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-        localStreamRef.current = null;
-      }
-      
-      if (screenStreamRef.current) {
-        screenStreamRef.current.getTracks().forEach(track => track.stop());
-        screenStreamRef.current = null;
-      }
-      
-      setIsAudioEnabled(false);
-      setIsVideoEnabled(false);
-      setIsScreenSharing(false);
-    }
-  }, []);
-
-  return {
-    status,
-    users,
-    messages,
-    channels,
-    servers,
-    currentChannelId,
-    currentServerId,
-    connectedPeers,
-    userStreams,
-    isAudioEnabled,
-    isVideoEnabled,
-    isScreenSharing,
-    localStream: localStreamRef.current,
-    connectToPeer,
-    sendMessage,
-    updateTypingStatus,
-    toggleAudio,
-    toggleVideo,
-    shareScreen,
-    uploadImage,
-    createChannel,
-    createServer,
-    selectChannel,
-    selectServer,
-    updateChannelPrivacy,
-    disconnect
-  };
 };
 
 export default usePeerConnection;

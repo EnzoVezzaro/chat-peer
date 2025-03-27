@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { User, Message, Channel } from '@/types/types';
 import ChannelList from '@/components/ChannelList';
 import ChatArea from '@/components/ChatArea';
 import ConnectionStatus from '@/components/ConnectionStatus';
@@ -20,19 +21,11 @@ const Index = () => {
   const [userId, setUserId] = useState('');
   const [channelName, setChannelName] = useState('');
   const [channelType, setChannelType] = useState<'text' | 'voice' | 'announcement'>('text');
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('userId');
-    const storedUsername = localStorage.getItem('username');
-    
-    if (storedUserId && storedUsername) {
-      setUserId(storedUserId);
-      setUsername(storedUsername);
-      setIsSetupDialogOpen(false);
-    } else if (!userId) {
-      setUserId(`user-${nanoid(8)}`);
-    }
-  }, [userId]);
+  const [storedData, setStoredData] = useState<{ users: User[]; messages: Message[]; channels: Channel[] }>({
+    users: [],
+    messages: [],
+    channels: []
+  });
 
   const {
     status,
@@ -57,6 +50,37 @@ const Index = () => {
     userId,
     username: username || 'Anonymous'
   });
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('userId');
+    const storedUsername = localStorage.getItem('username');
+    const storedDataString = localStorage.getItem('chatData');
+
+    if (storedUserId && storedUsername) {
+      setUserId(storedUserId);
+      setUsername(storedUsername);
+      setIsSetupDialogOpen(false);
+    } else if (!userId) {
+      setUserId(`user-${nanoid(8)}`);
+    }
+
+    if (storedDataString) {
+      try {
+        setStoredData(JSON.parse(storedDataString));
+      } catch (error) {
+        console.error('Error parsing chat data from localStorage:', error);
+      }
+    }
+  }, [userId, users, messages, channels]);
+
+  useEffect(() => {
+    setStoredData({ users, messages, channels });
+    localStorage.setItem('chatData', JSON.stringify({ users, messages, channels }));
+  }, [users, messages, channels]);
+
+  setTimeout(() => {
+    console.log('store data: ', storedData);
+  }, 2000);
 
   const handleSubmitUsername = (e: React.FormEvent) => {
     e.preventDefault();
