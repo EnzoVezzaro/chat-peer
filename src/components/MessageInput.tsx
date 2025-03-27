@@ -25,6 +25,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setIsBotCommand(message.includes('@bot'));
   }, [message]);
 
+  useEffect(() => {
+    console.log('ius bot: ', isBotCommand);
+    
+    // Detect if message includes "@bot"
+    if (isBotCommand){
+      setMessage(message + ' ');
+    }
+  }, [isBotCommand]);
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
