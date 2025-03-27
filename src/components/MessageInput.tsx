@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button';
 
 type MessageInputProps = {
   onSendMessage: (content: string) => void;
+  onBotCommand?: (prompt: string) => void; // Renamed prop for sending prompt
   disabled?: boolean;
   placeholder?: string;
 };
 
 const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
+  onBotCommand, // Use the new prop
   disabled = false,
-  placeholder = "Type a message..."
+  placeholder = "Type a message or use @bot <prompt>..." // Updated placeholder
 }) => {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -26,16 +28,36 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   const sendMessage = () => {
     const trimmedMessage = message.trim();
-    if (trimmedMessage && !disabled) {
-      onSendMessage(trimmedMessage);
-      setMessage('');
+    if (!trimmedMessage || disabled) {
+      return; // Do nothing if message is empty or input is disabled
+    }
 
+    // Check for bot command: @bot <prompt>
+    const botCommandMatch = trimmedMessage.match(/^@bot\s+(.+)/);
+    if (botCommandMatch && botCommandMatch[1]) {
+      const prompt = botCommandMatch[1].trim();
+      if (onBotCommand) {
+        onBotCommand(prompt);
+      } else {
+        console.warn('@bot command detected but no onBotCommand handler provided.');
+      }
+      setMessage(''); // Clear input after command
       // Refocus textarea
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
+      return; // Don't send the command itself as a regular message
     }
-  };
+
+    // If it's not a bot command, send the message normally
+    onSendMessage(trimmedMessage);
+    setMessage('');
+
+    // Refocus textarea
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }; // <-- Moved this closing brace up
 
   return (
     <div className="message-input-container flex gap-2 items-end">

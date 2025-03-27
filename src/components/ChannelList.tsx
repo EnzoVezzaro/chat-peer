@@ -3,9 +3,16 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Channel, Server } from '@/types/types';
 import { Button } from '@/components/ui/button';
-import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings } from 'lucide-react';
+import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings as SettingsIcon } from 'lucide-react'; // Renamed Settings to SettingsIcon
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 type ChannelListProps = {
   server?: Server;
@@ -13,6 +20,7 @@ type ChannelListProps = {
   currentChannelId?: string;
   onSelectChannel: (channelId: string) => void;
   onCreateChannel: (type: 'text' | 'voice' | 'announcement') => void;
+  onOpenSettings: () => void; // Added prop to open settings
   isAdmin: boolean;
 };
 
@@ -22,6 +30,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
   currentChannelId,
   onSelectChannel,
   onCreateChannel,
+  onOpenSettings, // Destructure new prop
   isAdmin
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
@@ -111,9 +120,9 @@ const ChannelList: React.FC<ChannelListProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 ml-auto p-0 opacity-0 group-hover:opacity-100"
+                  className="h-5 w-5 ml-auto p-0 opacity-0 group-hover:opacity-100" // Consider adding group class to parent Button
                 >
-                  <Settings className="h-3 w-3" />
+                  <SettingsIcon className="h-3 w-3" />
                 </Button>
               )}
             </Button>
@@ -125,15 +134,35 @@ const ChannelList: React.FC<ChannelListProps> = ({
 
   return (
     <div className="channel-list h-full w-60 bg-[#2b2d31] flex flex-col">
-      <div className="server-header p-3 h-12 shadow-sm flex items-center">
+      <div className="server-header p-3 h-12 shadow-sm flex items-center justify-between">
         <h2 className="font-semibold text-white truncate">{server?.name || "Direct Messages"}</h2>
         {isAdmin && (
-          <Button variant="ghost" size="icon" className="ml-auto">
-            <ChevronDown className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="ml-auto h-6 w-6">
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              {/* Add other server-related options here if needed */}
+              <DropdownMenuItem onClick={onOpenSettings}>
+                <SettingsIcon className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              {/* Example:
+              <DropdownMenuItem>
+                Invite People
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-500">
+                Leave Server
+              </DropdownMenuItem>
+              */}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
-      
+
       <div className="channels-container flex-1 p-2 overflow-y-auto">
         {renderChannelList("Text Channels", textChannels, 'text')}
         {renderChannelList("Voice Channels", voiceChannels, 'voice')}

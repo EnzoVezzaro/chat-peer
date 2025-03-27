@@ -11,12 +11,14 @@ import ChatArea from '@/components/ChatArea';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import VideoOverlay from '@/components/VideoOverlay';
 import InviteDialog from '@/components/InviteDialog';
+import SettingsDialog from '@/components/SettingsDialog'; // Import the new component
 import usePeerConnection from '@/hooks/usePeerConnection';
 
 const Index = () => {
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(true);
   const [isCreateChannelDialogOpen, setIsCreateChannelDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false); // State for settings dialog
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState('');
   const [channelName, setChannelName] = useState('');
@@ -112,6 +114,10 @@ const Index = () => {
   const handleOpenCreateChannel = (type: 'text' | 'voice' | 'announcement') => {
     setChannelType(type);
     setIsCreateChannelDialogOpen(true);
+  };
+
+  const handleOpenSettings = () => {
+    setIsSettingsDialogOpen(true);
   };
 
   const currentChannel = channels.find(c => c.id === currentChannelId);
@@ -226,9 +232,16 @@ const Index = () => {
             currentChannelId={currentChannelId || undefined}
             onSelectChannel={selectChannel}
             onCreateChannel={handleOpenCreateChannel}
+            onOpenSettings={handleOpenSettings} // Pass the handler
             isAdmin={true}
           />
-          
+
+          <SettingsDialog
+            isOpen={isSettingsDialogOpen}
+            onClose={() => setIsSettingsDialogOpen(false)}
+            // No other props needed for now as it handles its own state via localStorage
+          />
+
           <ChatArea
             messages={currentChannelMessages}
             users={users}
