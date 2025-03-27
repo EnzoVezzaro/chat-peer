@@ -139,7 +139,7 @@ const StorageDialog: React.FC<StorageDialogProps> = ({ isOpen, onClose }) => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg font-semibold">Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600">
-              This will permanently delete all your chat data and settings. This action cannot be undone.
+              This will permanently delete all your chat data and settings. This action cannot be undone. Make sure you have downloaded a backup if you wish to restore your data later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex justify-between">

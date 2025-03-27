@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 // Export types for reuse
 export type BotProvider = 'openai' | 'claude' | 'grok' | 'groq'; // Added 'groq'
 export type BotSettings = {
-  keys: Partial<Record<BotProvider, { apiKey: string }>>; // Store API keys per provider
+  keys: Partial<Record<BotProvider, { apiKey: string; model?: string }>>; // Store API keys per provider
   selectedProvider: BotProvider | null; // Store the currently selected provider
 };
 

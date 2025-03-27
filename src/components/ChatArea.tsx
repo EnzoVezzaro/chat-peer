@@ -163,13 +163,20 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     // Store initial placeholder with provider info
     setStreamingBotMessages(prev => ({ ...prev, [botMessageId]: { content: '...', provider: provider } }));
 
+    // Retrieve bot settings, including the selected model
+    const settings = getBotSettings();
+    const selectedModel = settings.keys[provider]?.model || 'gpt-3.5-turbo';
+
     try {
       // --- OpenAI Implementation ---
       if (provider === 'openai') {
-        const openai = new OpenAI({ apiKey: apiKey, dangerouslyAllowBrowser: true });
+        const openai = new OpenAI({
+          apiKey: apiKey,
+          dangerouslyAllowBrowser: true,
+        });
         const stream = await openai.chat.completions.create({
+          model: selectedModel,
           messages: history,
-          model: "gpt-3.5-turbo", // Or make model configurable
           stream: true,
         });
 
@@ -189,7 +196,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: history,
-            model: 'llama3-8b-8192', // Example Groq model
+            model: selectedModel, // Use selected model
             stream: true,
           }),
         });
@@ -274,7 +281,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         }
 
         const stream = await anthropic.messages.create({
-          model: "claude-3-opus-20240229",
+          model: selectedModel,
           max_tokens: 1024,
           messages: messagesForClaude,
           system: systemPrompt,
@@ -290,49 +297,49 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       }
        // --- Grok (xAI) Implementation (using fetch) ---
        else if (provider === 'grok') {
-         const GROK_XAI_API_URL = 'https://api.x.ai/v1/chat/completions';
-         const response = await fetch(GROK_XAI_API_URL, {
-           method: 'POST',
-           headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-           body: JSON.stringify({
-             messages: history, // Assuming OpenAI format works for now
-             model: 'grok-1', // Needs verification
-             stream: true,
-           }),
-         });
-         if (!response.ok) {
-           const errorBody = await response.json().catch(() => ({ message: 'Unknown error' }));
-           throw new Error(`Grok (xAI) API Error (${response.status}): ${errorBody?.error?.message || response.statusText}`);
-         }
-         if (!response.body) throw new Error('Grok (xAI) response body is null');
-         // Process stream (SSE format assumed)
-         const reader = response.body.getReader();
-         const decoder = new TextDecoder();
-         let buffer = '';
-         while (true) {
-           const { done, value } = await reader.read();
-           if (done) break;
-           buffer += decoder.decode(value, { stream: true });
-           const lines = buffer.split('\n');
-           buffer = lines.pop() || '';
-           for (const line of lines) {
-             if (line.startsWith('data: ')) {
-               const data = line.substring(6).trim();
-               if (data === '[DONE]') break;
-               try {
-                 const chunk = JSON.parse(data);
-                 // Adjust path based on actual Grok (xAI) response structure if needed
-                 const contentDelta = chunk.choices?.[0]?.delta?.content || '';
-                 if (contentDelta) {
-                   accumulatedContent += contentDelta;
-                   setStreamingBotMessages(prev => ({ ...prev, [botMessageId]: { content: accumulatedContent, provider: provider } }));
-                 }
-               } catch (e) { console.error('Error parsing Grok (xAI) stream chunk:', data, e); }
-             }
-           }
-         }
+        const GROK_XAI_API_URL = 'https://api.x.ai/v1/chat/completions';
+        const response = await fetch(GROK_XAI_API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: history,
+            model: selectedModel,
+            stream: true,
+          }),
+        });
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({ message: 'Unknown error' }));
+          throw new Error(`Grok (xAI) API Error (${response.status}): ${errorBody?.error?.message || response.statusText}`);
+        }
+        if (!response.body) throw new Error('Grok (xAI) response body is null');
+        // Process stream (SSE format assumed)
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6).trim();
+              if (data === '[DONE]') break;
+              try {
+                const chunk = JSON.parse(data);
+                // Adjust path based on actual Grok (xAI) response structure if needed
+                const contentDelta = chunk.choices?.[0]?.delta?.content || '';
+                if (contentDelta) {
+                  accumulatedContent += contentDelta;
+                  setStreamingBotMessages(prev => ({ ...prev, [botMessageId]: { content: accumulatedContent, provider: provider } }));
+                }
+              } catch (e) { console.error('Error parsing Grok (xAI) stream chunk:', data, e); }
+            }
+          }
+        }
        }
-      // --- Handle Unknown Provider ---
+       // --- Handle Unknown Provider ---
       else {
         throw new Error(`Unsupported bot provider: ${provider}`);
       }
