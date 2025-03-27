@@ -13,23 +13,15 @@ type InviteDialogProps = {
   onClose: () => void;
   onInvite: (peerId: string, channelId?: string) => void;
   currentUserId: string;
-  username: string;
 };
 
 const InviteDialog: React.FC<InviteDialogProps> = ({ 
   isOpen, 
   onClose, 
   onInvite,
-  currentUserId,
-  username
+  currentUserId
 }) => {
   const [peerId, setPeerId] = useState('');
-
-  // fix this part, i don't use it to trigger, i only need to use the updateChannelPrivacy
-  const { updateChannelPrivacy } = usePeerConnection({
-    userId: currentUserId,
-    username: username || 'Anonymous'
-  })
 
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +37,6 @@ const InviteDialog: React.FC<InviteDialogProps> = ({
     }
     
     onInvite(peerId.trim(), currentUserId);
-    updateChannelPrivacy(false);
     setPeerId('');
     onClose(); 
   };

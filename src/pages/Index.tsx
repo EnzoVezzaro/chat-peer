@@ -29,10 +29,10 @@ const Index = () => {
       setUserId(storedUserId);
       setUsername(storedUsername);
       setIsSetupDialogOpen(false);
-    } else {
+    } else if (!userId) {
       setUserId(`user-${nanoid(8)}`);
     }
-  }, []);
+  }, [userId]);
 
   const {
     status,
@@ -52,6 +52,7 @@ const Index = () => {
     uploadImage,
     createChannel,
     selectChannel,
+    updateChannelPrivacy
   } = usePeerConnection({
     userId,
     username: username || 'Anonymous'
@@ -187,9 +188,11 @@ const Index = () => {
       <InviteDialog
         isOpen={isInviteDialogOpen}
         onClose={() => setIsInviteDialogOpen(false)}
-        onInvite={(peerId) => connectToPeer(peerId, currentChannelId)}
+        onInvite={(peerId) => {
+          updateChannelPrivacy(false);
+          connectToPeer(peerId, currentChannelId);
+        }}
         currentUserId={userId}
-        username={username}
       />
       
       {!isSetupDialogOpen && (
