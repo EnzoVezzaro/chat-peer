@@ -104,7 +104,7 @@ function Index() {
               animate-fade-in-up opacity-0" 
               style={{ animationDelay: '0.4s' }}
             >
-              Elevate your communication with end-to-end encryption, AI-powered insights, and seamless collaboration.
+              Elevate your communication with peer-to-peer messaging, AI-powered insights, and seamless collaboration.
             </p>
             <div 
               className="flex justify-center space-x-4 
@@ -130,8 +130,8 @@ function Index() {
             {[
               {
                 icon: ShieldCheck,
-                title: "End-to-End Encryption",
-                description: "Military-grade security ensuring your conversations remain completely private."
+                title: "Secure & Private Messaging",
+                description: "Peer-to-peer messaging with built-in encryption, ensuring your conversations remain private and secure."
               },
               {
                 icon: Zap,
