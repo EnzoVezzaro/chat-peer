@@ -3,16 +3,9 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Channel, Server } from '@/types/types';
 import { Button } from '@/components/ui/button';
-import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings as SettingsIcon } from 'lucide-react'; // Renamed Settings to SettingsIcon
+import { Hash, Volume2, ChevronDown, ChevronRight, Plus, Settings as SettingsIcon, HardDrive } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 
 type ChannelListProps = {
   server?: Server;
@@ -20,7 +13,8 @@ type ChannelListProps = {
   currentChannelId?: string;
   onSelectChannel: (channelId: string) => void;
   onCreateChannel: (type: 'text' | 'voice' | 'announcement') => void;
-  onOpenSettings: () => void; // Added prop to open settings
+  onOpenSettings: () => void;
+  onOpenStorage: () => void;
   isAdmin: boolean;
 };
 
@@ -30,6 +24,7 @@ const ChannelList: React.FC<ChannelListProps> = ({
   currentChannelId,
   onSelectChannel,
   onCreateChannel,
+  onOpenStorage,
   onOpenSettings, // Destructure new prop
   isAdmin
 }) => {
@@ -136,31 +131,6 @@ const ChannelList: React.FC<ChannelListProps> = ({
     <div className="channel-list h-full w-60 bg-[#2b2d31] flex flex-col">
       <div className="server-header p-3 h-12 shadow-sm flex items-center justify-between">
         <h2 className="font-semibold text-white truncate">{server?.name || "Direct Messages"}</h2>
-        {isAdmin && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="ml-auto h-6 w-6">
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end">
-              {/* Add other server-related options here if needed */}
-              <DropdownMenuItem onClick={onOpenSettings}>
-                <SettingsIcon className="mr-2 h-4 w-4" />
-                <span>Settings</span>
-              </DropdownMenuItem>
-              {/* Example:
-              <DropdownMenuItem>
-                Invite People
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-500">
-                Leave Server
-              </DropdownMenuItem>
-              */}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
 
       <div className="channels-container flex-1 p-2 overflow-y-auto">
@@ -169,8 +139,23 @@ const ChannelList: React.FC<ChannelListProps> = ({
         {renderChannelList("Announcements", announcementChannels, 'announcement')}
       </div>
       
-      <div className="user-controls p-3 h-13 bg-[#232428] mt-auto">
-        {/* User controls area */}
+      <div className="user-controls p-3 h-13 bg-[#232428] mt-auto flex gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 bg-[#2b2d31] hover:bg-[#2b2d31]-700"
+          onClick={onOpenSettings}
+        >
+          <SettingsIcon className="h-5 w-5 text-[#e5e7eb]" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 bg-[#2b2d31] hover:bg-[#2b2d31]-700"
+          onClick={onOpenStorage}
+        >
+          <HardDrive className="h-5 w-5 text-[#e5e7eb]" />
+        </Button>
       </div>
     </div>
   );

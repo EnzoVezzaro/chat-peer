@@ -11,14 +11,16 @@ import ChatArea from '@/components/ChatArea';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import VideoOverlay from '@/components/VideoOverlay';
 import InviteDialog from '@/components/InviteDialog';
-import SettingsDialog from '@/components/SettingsDialog'; // Import the new component
+import ModelLLMDialog from '@/components/ModelLLMDialog';
+import StorageDialog from '@/components/StorageDialog';
 import usePeerConnection from '@/hooks/usePeerConnection';
 
 const Index = () => {
   const [isSetupDialogOpen, setIsSetupDialogOpen] = useState(true);
   const [isCreateChannelDialogOpen, setIsCreateChannelDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = useState(false); // State for settings dialog
+  const [isModelLLMDialogOpen, setIsModelLLMDialogOpen] = useState(false);
+  const [isStorageDialogOpen, setIsStorageDialogOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState('');
   const [channelName, setChannelName] = useState('');
@@ -63,7 +65,8 @@ const Index = () => {
       setUsername(storedUsername);
       setIsSetupDialogOpen(false);
     } else if (!userId) {
-      setUserId(`user-${nanoid(8)}`);
+      // PeerJS requires IDs to be alphanumeric without special characters
+      setUserId(`user-${nanoid(8).replace(/[^a-zA-Z0-9]/g, '')}`);
     }
 
     if (storedDataString) {
@@ -79,10 +82,6 @@ const Index = () => {
     setStoredData({ users, messages, channels });
     localStorage.setItem('chatData', JSON.stringify({ users, messages, channels }));
   }, [users, messages, channels]);
-
-  setTimeout(() => {
-    console.log('store data: ', storedData);
-  }, 2000);
 
   const handleSubmitUsername = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +115,12 @@ const Index = () => {
     setIsCreateChannelDialogOpen(true);
   };
 
-  const handleOpenSettings = () => {
-    setIsSettingsDialogOpen(true);
+  const handleOpenModelLLM = () => {
+    setIsModelLLMDialogOpen(true);
+  };
+
+  const handleOpenStorage = () => {
+    setIsStorageDialogOpen(true);
   };
 
   const currentChannel = channels.find(c => c.id === currentChannelId);
@@ -232,14 +235,19 @@ const Index = () => {
             currentChannelId={currentChannelId || undefined}
             onSelectChannel={selectChannel}
             onCreateChannel={handleOpenCreateChannel}
-            onOpenSettings={handleOpenSettings} // Pass the handler
+            onOpenSettings={handleOpenModelLLM}
+            onOpenStorage={handleOpenStorage}
             isAdmin={true}
           />
 
-          <SettingsDialog
-            isOpen={isSettingsDialogOpen}
-            onClose={() => setIsSettingsDialogOpen(false)}
-            // No other props needed for now as it handles its own state via localStorage
+          <ModelLLMDialog
+            isOpen={isModelLLMDialogOpen}
+            onClose={() => setIsModelLLMDialogOpen(false)}
+          />
+          
+          <StorageDialog
+            isOpen={isStorageDialogOpen}
+            onClose={() => setIsStorageDialogOpen(false)}
           />
 
           <ChatArea
