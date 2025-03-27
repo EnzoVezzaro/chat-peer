@@ -446,6 +446,17 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
           channelId: currentChannelId
         }
       });
+    } else {
+      // Send to all connected peers if the channel is private
+      connectedPeers.forEach(peerId => {
+        sendToPeer(peerId, {
+          type: 'message',
+          payload: {
+            ...message,
+            channelId: currentChannelId
+          }
+        });
+      });
     }
 
     return message;
