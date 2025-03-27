@@ -68,19 +68,14 @@ const Index = () => {
       // PeerJS requires IDs to be alphanumeric without special characters
       setUserId(`user-${nanoid(8).replace(/[^a-zA-Z0-9]/g, '')}`);
     }
-
-    if (storedDataString) {
-      try {
-        setStoredData(JSON.parse(storedDataString));
-      } catch (error) {
-        console.error('Error parsing chat data from localStorage:', error);
-      }
-    }
   }, [userId, users, messages, channels]);
 
   useEffect(() => {
     setStoredData({ users, messages, channels });
-    localStorage.setItem('chatData', JSON.stringify({ users, messages, channels }));
+    console.log('saving to local: ', localStorage.getItem('useLocalStorage'));
+    if (localStorage.getItem('useLocalStorage')){
+      localStorage.setItem('chatData', JSON.stringify({ users, messages, channels }));
+    }
   }, [users, messages, channels]);
 
   const handleSubmitUsername = (e: React.FormEvent) => {
