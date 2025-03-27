@@ -420,6 +420,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     user.isTyping
   );
 
+  const isRoomFull = users.length === 2 // TODO: find a way to have multiple users on the same chatroom
+
   return (
     <div className="chat-area flex-1 flex flex-col h-full">
       <div className="channel-header h-12 border-b border-[#1e1f22] bg-[#313338] flex items-center px-4 shadow-sm">
@@ -483,7 +485,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                <TooltipProvider>
                  <Tooltip>
                    <TooltipTrigger asChild>
-                     <Button variant="ghost" size="icon" onClick={onOpenInviteDialog}>
+                     <Button variant="ghost" disabled={isRoomFull} size="icon" onClick={onOpenInviteDialog}>
                        <Users className="h-5 w-5 text-gray-400 hover:text-white" />
                      </Button>
                    </TooltipTrigger>
