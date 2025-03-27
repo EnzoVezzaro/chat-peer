@@ -528,49 +528,70 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   }, [isVideoEnabled]);
 
   // Toggle video
-  const toggleVideo = useCallback(async () => {
+// Move callAllPeers above toggleVideo
+const callAllPeers = useCallback(() => {
+  if (!peerRef.current || !localStreamRef.current) return;
+  
+  connectedPeers.forEach(peerId => {
     try {
-      if (!localStreamRef.current) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
-        localStreamRef.current = stream;
+      const call = peerRef.current!.call(peerId, localStreamRef.current!);
+      
+      call.on('stream', (remoteStream) => {
+        console.log('Received remote stream from', peerId);
+        setUserStreams(prev => ({
+          ...prev,
+          [peerId]: remoteStream
+        }));
+      });
+    } catch (error) {
+      console.error('Error calling peer:', error);
+    }
+  });
+}, [connectedPeers, peerRef, localStreamRef, setUserStreams]);
+
+const toggleVideo = useCallback(async () => {
+  try {
+    if (!localStreamRef.current) {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
+      localStreamRef.current = stream;
+      
+      // Call all connected peers
+      callAllPeers();
+      
+      setIsVideoEnabled(true);
+      toast.success('Camera enabled');
+    } else {
+      const videoTracks = localStreamRef.current.getVideoTracks();
+      
+      if (videoTracks.length > 0) {
+        const isCurrentlyEnabled = videoTracks[0].enabled;
+        videoTracks.forEach(track => {
+          track.enabled = !isCurrentlyEnabled;
+        });
         
-        // Call all connected peers
+        setIsVideoEnabled(!isCurrentlyEnabled);
+        toast.success(isCurrentlyEnabled ? 'Camera disabled' : 'Camera enabled');
+      } else {
+        // No video tracks, need to get new stream
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
+        
+        // Replace current stream
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach(track => track.stop());
+        }
+        
+        localStreamRef.current = stream;
         callAllPeers();
         
         setIsVideoEnabled(true);
         toast.success('Camera enabled');
-      } else {
-        const videoTracks = localStreamRef.current.getVideoTracks();
-        
-        if (videoTracks.length > 0) {
-          const isCurrentlyEnabled = videoTracks[0].enabled;
-          videoTracks.forEach(track => {
-            track.enabled = !isCurrentlyEnabled;
-          });
-          
-          setIsVideoEnabled(!isCurrentlyEnabled);
-          toast.success(isCurrentlyEnabled ? 'Camera disabled' : 'Camera enabled');
-        } else {
-          // No video tracks, need to get new stream
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: isAudioEnabled, video: true });
-          
-          // Replace current stream
-          if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(track => track.stop());
-          }
-          
-          localStreamRef.current = stream;
-          callAllPeers();
-          
-          setIsVideoEnabled(true);
-          toast.success('Camera enabled');
-        }
       }
-    } catch (error) {
-      console.error('Error toggling video:', error);
-      toast.error('Failed to toggle camera');
     }
-  }, [isAudioEnabled]);
+  } catch (error) {
+    console.error('Error toggling video:', error);
+    toast.error('Failed to toggle camera');
+  }
+}, [isAudioEnabled, callAllPeers]);
 
   // Share screen
   const shareScreen = useCallback(async () => {
@@ -614,27 +635,6 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
       toast.error('Failed to share screen');
     }
   }, [isScreenSharing]);
-
-  // Call all peers with current stream
-  const callAllPeers = useCallback(() => {
-    if (!peerRef.current || !localStreamRef.current) return;
-    
-    connectedPeers.forEach(peerId => {
-      try {
-        const call = peerRef.current!.call(peerId, localStreamRef.current!);
-        
-        call.on('stream', (remoteStream) => {
-          console.log('Received remote stream from', peerId);
-          setUserStreams(prev => ({
-            ...prev,
-            [peerId]: remoteStream
-          }));
-        });
-      } catch (error) {
-        console.error('Error calling peer:', error);
-      }
-    });
-  }, [connectedPeers]);
 
   // Call all peers with screen share
   const callAllPeersWithScreen = useCallback(() => {
