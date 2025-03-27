@@ -220,7 +220,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
         
         <div className={cn(
-          "video-sidebar w-80 border-l border-[#1e1f22] bg-[#2b2d31] p-2 overflow-y-auto relative transition-all duration-300 ease-in-out",
+          "video-sidebar border-l border-[#1e1f22] bg-[#2b2d31] p-2 overflow-y-auto relative transition-all duration-300 ease-in-out",
           isVideoEnabled ? "translate-x-0" : "translate-x-full"
         )}>
           <button 
