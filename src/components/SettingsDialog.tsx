@@ -13,6 +13,9 @@ export type BotSettings = {
   selectedProvider: BotProvider | null; // Store the currently selected provider
 };
 
+// Generic Bot Sender ID Prefix
+export const BOT_SENDER_ID_PREFIX = 'bot-';
+
 // Export constants for reuse
 export const BOT_PROVIDERS: { value: BotProvider; label: string }[] = [
   { value: 'openai', label: 'OpenAI (ChatGPT)' },

@@ -5,6 +5,9 @@ import { cn } from '@/lib/utils';
 import { Message as MessageType, User } from '@/types/types';
 import UserAvatar from './UserAvatar';
 import { Play } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; // Import Badge component
+
+import { BOT_SENDER_ID_PREFIX } from './SettingsDialog';
 
 type MessageProps = {
   message: MessageType;
@@ -24,9 +27,11 @@ const Message: React.FC<MessageProps> = ({
   
   const renderMessageContent = () => {
     switch (message.type) {
-      case 'text':
-        return <p className="whitespace-pre-wrap break-words">{message.content}</p>;
-      
+      case 'text': {
+        // Prepend bot identifier if the message is from a bot
+        const content = isBotMessage ? `@bot-answer ${message.content}` : message.content;
+        return <p className="whitespace-pre-wrap break-words">{content}</p>;
+      }
       case 'image':
         return (
           <div className="mt-2 max-w-md">
@@ -87,13 +92,20 @@ const Message: React.FC<MessageProps> = ({
       </div>
     );
   };
-  
+
+  // Determine if the message is from any bot *inside* the component body
+  const isBotMessage = sender.id.startsWith(BOT_SENDER_ID_PREFIX);
+
   return (
-    <div 
+     <div
       className={cn(
-        'flex gap-3 animate-fade-in hover:bg-[#2e3035] rounded-md py-1 px-2 -mx-2',
+        'flex gap-3 animate-fade-in rounded-md py-1 px-2 -mx-2',
+        // Apply persistent background difference for bot messages
+        isBotMessage ? 'bg-[#2a2c30]' : '', // Slightly darker/different background for bots
+        isCurrentUser ? 'hover:bg-[#35373c]' : 'hover:bg-[#2e3035]' // Keep hover effect
       )}
     >
+      {/* Conditionally render avatar based on showAvatar */}
       {showAvatar ? (
         <UserAvatar user={sender} size="md" showStatus={true} />
       ) : (
@@ -102,8 +114,14 @@ const Message: React.FC<MessageProps> = ({
       
       <div className="flex flex-col min-w-0">
         {showAvatar && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-baseline gap-2"> {/* Use baseline alignment */}
             <span className="font-medium text-white">{sender.name}</span>
+            {/* Add Bot badge if it's a bot message */}
+            {isBotMessage && (
+              <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
+                Bot
+              </Badge>
+            )}
             <span className="text-xs text-gray-400">{formattedDate}</span>
           </div>
         )}

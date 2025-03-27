@@ -206,7 +206,6 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
         case 'message': {
           const messageData = data.payload as Message & { channelId?: string };
           setMessages((prev) => [...prev, messageData]);
-
           // Update channel messages
           setChannels(prev => prev.map(channel => {
             if (channel.id === messageData.channelId) {
@@ -390,20 +389,20 @@ const usePeerConnection = ({ userId, username }: UsePeerConnectionProps) => {
   };
 
   // Send a message
-  const sendMessage = useCallback((content: string, type: 'text' | 'image' | 'audio' | 'video' = 'text') => {
+  const sendMessage = useCallback((content: string, type: 'text' | 'image' | 'audio' | 'video' = 'text', botId?: string) => {
     if ((!content.trim() && type === 'text') || status !== 'connected') return;
 
     const message: Message = {
-      id: `${userId}-${Date.now()}`,
+      id: `${botId || userId}-${Date.now()}`,
       content,
-      senderId: userId,
+      senderId: botId || userId,
       timestamp: Date.now(),
       read: false,
       type
     };
 
     const currentChannel = channels.find((channel) => channel.id === currentChannelId);
-    console.log('check room: ', currentChannel);
+    console.log('check message: ', message);
 
     // Shared chat
     setMessages((prev) => [...prev, message]);

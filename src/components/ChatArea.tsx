@@ -108,6 +108,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     // Filter out potential bot typing indicators if needed, or handle them separately
     const userMessages = messages; //.filter(msg => msg.senderId !== BOT_SENDER_ID || msg.type !== 'typing');
+    console.log('userMessages: ', userMessages);
+    
     const sorted = [...userMessages].sort((a, b) => a.timestamp - b.timestamp);
     setSortedMessages(sorted);
   }, [messages]);
@@ -337,6 +339,8 @@ const ChatArea: React.FC<ChatAreaProps> = ({
 
       // --- Final Message Handling ---
       if (accumulatedContent && !accumulatedContent.startsWith("[")) { // Don't send placeholder messages
+        console.log('isse here: ', botSenderId);
+        
          onSendMessage(accumulatedContent, 'text', botSenderId); // Use provider-specific sender ID
       } else if (!accumulatedContent) {
          toast.info("Bot stream finished with no content.");
@@ -501,12 +505,14 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               name: 'Unknown User',
               status: 'offline' as const
             };
-
+            
+            console.log('message: ', message.content);            
+            
             // Dynamic handling for bot sender based on ID prefix
             if (message.senderId.startsWith(BOT_SENDER_ID_PREFIX)) {
                const providerValue = message.senderId.substring(BOT_SENDER_ID_PREFIX.length) as BotProvider;
                sender = { id: message.senderId, name: getBotDisplayName(providerValue), status: 'online' }; // Use helper
-            }
+            }         
 
             return (
               <Message
