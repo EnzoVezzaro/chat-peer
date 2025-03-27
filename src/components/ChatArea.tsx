@@ -595,7 +595,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
       </div>
 
       {/* Message Input Area */}
-      <div className="message-input-container p-4 bg-[#313338]">
+      <div className="message-input-container p-4 pr-6 bg-[#313338]">
         <div className="flex items-center">
           <TooltipProvider>
             <Tooltip>

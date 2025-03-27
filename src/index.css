@@ -149,7 +149,7 @@
   }
   
   .message-input-container {
-    @apply p-2 w-full;
+    @apply pl-2 pr-4 w-full;
   }
   
   .glass-panel {
