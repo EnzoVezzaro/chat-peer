@@ -596,6 +596,11 @@ const toggleVideo = useCallback(async () => {
         });
         
         setIsVideoEnabled(!isCurrentlyEnabled);
+        // Stop the video stream when disabling the camera
+        if (isCurrentlyEnabled && localStreamRef.current) {
+          localStreamRef.current.getVideoTracks().forEach(track => track.stop());
+          localStreamRef.current = null; // Set localStreamRef.current to null
+        }
         toast.success(isCurrentlyEnabled ? 'Camera disabled' : 'Camera enabled');
       } else {
         // No video tracks, need to get new stream
